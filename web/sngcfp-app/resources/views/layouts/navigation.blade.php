@@ -1,11 +1,10 @@
 <aside x-data="{ open: true }" 
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-[#1B4F72] text-white transition-transform duration-300 transform lg:translate-x-0 flex flex-col"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-[#1B4F72] text-white transition-transform duration-300 transform lg:translate-x-0 flex flex-col shadow-2xl"
     :class="{'translate-x-0': open, '-translate-x-full': !open}">
     
-    <div class="flex items-center px-6 h-20 bg-[#0d2a3d] shrink-0">
+    <div class="flex items-center px-6 h-20 bg-[#0d2a3d] shrink-0 border-b border-white/5">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-            <x-application-logo type="app" class="h-10 w-auto" />
-            <span class="font-montserrat font-bold text-lg tracking-tight">SNGCFP</span>
+            <span class="font-montserrat font-bold text-xl tracking-tighter text-white">SNG<span class="text-[#27AE60]">CFP</span></span>
         </a>
     </div>
 
@@ -25,30 +24,48 @@
             </x-nav-link>
         </div>
 
-        <div class="pt-2 pb-2 text-[11px] font-bold text-[#27AE60] uppercase tracking-[0.15em] px-3">
-            Finances
-        </div>
-        <div class="space-y-1 mb-6">
-            <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
-                <svg class="w-5 h-5 mr-3 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                <span class="font-inter">Comptabilité</span>
-            </a>
+        {{-- Force le rôle en MAJUSCULES pour éviter les erreurs de saisie --}}
+@php $role = strtoupper(Auth::user()->role); @endphp
 
-            <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
-                <svg class="w-5 h-5 mr-3 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                <span class="font-inter">Marchés Publics</span>
-            </a>
-        </div>
+@if(in_array($role, ['COMPTABLE_BAD', 'GESTIONNAIRE_BUDGET', 'ORDONNATEUR', 'ADMIN']))
+    <div class="pt-2 pb-2 text-[11px] font-bold text-[#27AE60] uppercase tracking-[0.15em] px-3">
+        Finances & Budget
+    </div>
+    <div class="space-y-1 mb-6">
+        <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
+            <span class="text-sm">Comptabilité & Paiements</span>
+        </a>
+        <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
+            <span class="text-sm">Suivi Budgétaire</span>
+        </a>
+    </div>
+@endif
 
-        <div class="pt-2 pb-2 text-[11px] font-bold text-[#27AE60] uppercase tracking-[0.15em] px-3">
-            Analyses
-        </div>
-        <div class="space-y-1">
-            <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
-                <svg class="w-5 h-5 mr-3 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 6v-3m-9 3h12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                <span class="font-inter font-medium">Rapports BAD</span>
-            </a>
-        </div>
+        @if(in_array($role, ['SPECIALISTE_MARCHE', 'ADMIN']))
+            <div class="pt-2 pb-2 text-[11px] font-bold text-[#27AE60] uppercase tracking-[0.15em] px-3">
+                Passation de Marchés
+            </div>
+            <div class="space-y-1 mb-6">
+                <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
+                    <span class="text-sm">Marchés Publics</span>
+                </a>
+            </div>
+        @endif
+
+        @if(in_array($role, ['CONTROLEUR_INTERNE', 'ADMIN']))
+            <div class="pt-2 pb-2 text-[11px] font-bold text-[#27AE60] uppercase tracking-[0.15em] px-3">
+                Analyses & Audit
+            </div>
+            <div class="space-y-1 mb-6">
+                <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
+                    <span class="text-sm">Rapports BAD</span>
+                </a>
+                <a href="#" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all group">
+                    <span class="text-sm">Audit Logs</span>
+                </a>
+            </div>
+        @endif
+
     </nav>
 
     <div class="p-4 bg-[#0d2a3d] shrink-0">

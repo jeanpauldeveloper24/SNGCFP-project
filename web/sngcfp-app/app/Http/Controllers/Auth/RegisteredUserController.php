@@ -24,20 +24,21 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            // Ajout de la validation du rôle
+            'role' => ['required', 'string', 'in:COMPTABLE_BAD,GESTIONNAIRE_BUDGET,SPECIALISTE_MARCHE,ORDONNATEUR,CONTROLEUR_INTERNE,ADMIN'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'role' => $request->role, // On enregistre le rôle ici
             'password' => Hash::make($request->password),
         ]);
 
