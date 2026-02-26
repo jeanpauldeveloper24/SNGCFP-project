@@ -1,47 +1,39 @@
 <x-app-layout>
-    <x-slot name="header">
-        Suivi Budgétaire
-    </x-slot>
+    <x-slot name="header">Suivi Budgétaire</x-slot>
 
     <div class="space-y-6">
+        @php
+            $tauxExecGlobal = ($projets->sum('budget_alloue') > 0) ? ($projets->sum('budget_depense') / $projets->sum('budget_alloue')) * 100 : 0;
+        @endphp
+        
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="text-lg font-bold text-[#1B4F72]">Consommation Globale du Projet</h3>
-                    <p class="text-sm text-gray-500">Exercice 2026 - Période Janvier</p>
+                    <h3 class="text-lg font-bold text-[#1B4F72]">Consommation Globale du Portefeuille</h3>
+                    <p class="text-sm text-gray-500">Totalité des 10 projets BAD</p>
                 </div>
                 <div class="text-right">
-                    <span class="text-3xl font-black text-[#1B4F72]">28%</span>
-                    <p class="text-[10px] font-bold text-[#27AE60] uppercase tracking-widest">Taux d'exécution</p>
+                    <span class="text-3xl font-black text-[#1B4F72]">{{ round($tauxExecGlobal) }}%</span>
+                    <p class="text-[10px] font-bold text-[#27AE60] uppercase">Taux d'exécution</p>
                 </div>
             </div>
-            
-            <div class="w-full bg-gray-100 rounded-full h-4 mt-4 overflow-hidden">
-                <div class="bg-[#27AE60] h-4 rounded-full shadow-inner" style="width: 28%"></div>
+            <div class="w-full bg-gray-100 rounded-full h-4 mt-4 overflow-hidden shadow-inner">
+                <div class="bg-[#27AE60] h-4 rounded-full" style="width: {{ $tauxExecGlobal }}%"></div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            @php
-                $composantes = [
-                    ['titre' => 'Infrastructures & Travaux', 'total' => 200, 'conso' => 45, 'color' => 'bg-blue-500'],
-                    ['titre' => 'Acquisition Équipements', 'total' => 150, 'conso' => 80, 'color' => 'bg-yellow-500'],
-                    ['titre' => 'Renforcement Capacités', 'total' => 50, 'conso' => 10, 'color' => 'bg-purple-500'],
-                    ['titre' => 'Gestion du Projet', 'total' => 50, 'conso' => 35, 'color' => 'bg-red-500']
-                ];
-            @endphp
-
-            @foreach($composantes as $item)
+            @foreach($projets as $pj)
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between mb-2">
-                    <span class="text-sm font-bold text-gray-700">{{ $item['titre'] }}</span>
-                    <span class="text-xs font-mono text-gray-400">{{ $item['conso'] }}M / {{ $item['total'] }}M FCFA</span>
+                    <span class="text-sm font-bold text-gray-700">{{ $pj->nom }}</span>
+                    <span class="text-xs font-mono text-gray-400">{{ number_format($pj->budget_depense/1000000, 1) }}M / {{ number_format($pj->budget_alloue/1000000, 1) }}M FCFA</span>
                 </div>
                 <div class="w-full bg-gray-50 rounded-full h-2">
-                    <div class="{{ $item['color'] }} h-2 rounded-full" style="width: {{ ($item['conso']/$item['total'])*100 }}%"></div>
+                    <div class="bg-blue-500 h-2 rounded-full" style="width: {{ $pj->taux_execution }}%"></div>
                 </div>
                 <div class="mt-2 text-right">
-                    <span class="text-[10px] font-bold text-gray-400">{{ round(($item['conso']/$item['total'])*100) }}% consommé</span>
+                    <span class="text-[10px] font-bold text-gray-400">{{ $pj->taux_execution }}% consommé</span>
                 </div>
             </div>
             @endforeach

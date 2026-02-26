@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            // Ajoute la colonne 'role' juste après l'email
-            $table->string('role')->nullable()->after('email');
+        Schema::create('permissions', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
 
@@ -22,9 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            // Supprime la colonne si on annule la migration
-            $table->dropColumn('role');
-        });
+        Schema::dropIfExists('permissions');
     }
 };

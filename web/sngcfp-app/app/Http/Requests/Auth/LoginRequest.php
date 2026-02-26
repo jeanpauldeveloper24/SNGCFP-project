@@ -37,20 +37,46 @@ class LoginRequest extends FormRequest
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function authenticate(): void
-    {
-        $this->ensureIsNotRateLimited();
+   public function authenticate(): void
+{
+    $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+    if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        RateLimiter::hit($this->throttleKey());
 
+        throw ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
+    }
+
+    // --- DÉBUT DES MODIFICATIONS ---
+    $user = Auth::user();
+
+    // On charge la relation role si ce n'est pas déjà fait
+    $user->load('role');
+
+    // On vérifie si on est sur une requête API (Flutter) ou Web
+    // Si la requête attend du JSON, c'est que ça vient de Flutter
+    if ($this->expectsJson()) {
+        if (!$user->role || $user->role->platform !== 'flutter_desktop') {
+            Auth::logout(); // On déconnecte immédiatement
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => "Accès refusé. Ce compte n'est pas autorisé sur l'application Desktop.",
             ]);
         }
-
-        RateLimiter::clear($this->throttleKey());
+    } else {
+        // Sinon, c'est la connexion via le navigateur (Laravel Web)
+        if (!$user->role || $user->role->platform !== 'laravel_web') {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => "Accès refusé. Ce compte est réservé à l'application Desktop.",
+            ]);
+        }
     }
+    // --- FIN DES MODIFICATIONS ---
+
+    RateLimiter::clear($this->throttleKey());
+}
 
     /**
      * Ensure the login request is not rate limited.

@@ -3,7 +3,7 @@
     :class="{'translate-x-0': open, '-translate-x-full': !open}">
     
     <div class="flex items-center px-6 h-20 bg-[#0d2a3d] shrink-0 border-b border-white/5">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+        <a href="{{ url('/') }}" class="flex items-center gap-3">
             <span class="font-montserrat font-bold text-xl tracking-tighter text-white">SNG<span class="text-[#27AE60]">CFP</span></span>
         </a>
     </div>
@@ -26,28 +26,63 @@
 
         @php $role = strtoupper(Auth::user()->role); @endphp
 
-        @if(in_array($role, ['COMPTABLE_BAD', 'GESTIONNAIRE_BUDGET', 'ORDONNATEUR', 'ADMIN']))
+        @if(in_array($role, ['GESTIONNAIRE_BUDGET', 'ORDONNATEUR', 'ADMIN']))
         <div class="mb-6">
             <p class="text-[10px] font-bold text-white/40 uppercase px-3 mb-2 tracking-widest">Gestion Financière</p>
-            <a href="{{ route('finances.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('finances.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.finances') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.finances') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Finances & Budget</span>
             </a>
-            <a href="{{ route('comptabilite.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('comptabilite.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.comptabilite') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.comptabilite') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Comptabilité & Paiements</span>
             </a>
-            <a href="{{ route('budget.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('budget.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.budget') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.budget') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Suivi Budgétaire</span>
             </a>
         </div>
         @endif
 
+         @if(in_array($role, ['COMPTABLE_BAD']))
+    <div class="mb-6">
+        <p class="text-[10px] font-bold text-[#27AE60] uppercase px-3 mb-2 tracking-widest">Expertise Comptable</p>
+        
+        <a href="{{ route('menus.comptabilite') }}" 
+           class="flex items-center p-3 rounded-lg transition-all {{ request()->routeIs('menus.comptabilite') ? 'bg-[#2E86C1] text-white shadow-lg' : 'text-white/70 hover:bg-[#2E86C1]/50 hover:text-white' }}">
+            <span class="text-sm font-medium">Comptabilité de Caisse</span>
+        </a>
+
+        <a href="{{ route('menus.actif') }}" 
+   class="flex items-center p-3 rounded-lg transition-all {{ request()->routeIs('menus.actif') ? 'bg-[#2E86C1] text-white' : 'text-white/70 hover:bg-[#2E86C1]/50 hover:text-white' }}">
+    <span class="text-sm font-medium">Comptabilité de l'Actif</span>
+</a>
+
+        <a href="{{ route('menus.budget') }}" 
+           class="flex items-center p-3 rounded-lg transition-all {{ request()->routeIs('menus.budget') ? 'bg-[#2E86C1] text-white shadow-lg' : 'text-white/70 hover:bg-[#2E86C1]/50 hover:text-white' }}">
+            <span class="text-sm font-medium">Comptabilité de Gestion</span>
+        </a>
+    </div>
+
+    <div class="mb-6 pt-4 border-t border-white/5">
+        <p class="text-[10px] font-bold text-white/40 uppercase px-3 mb-2 tracking-widest">Reporting & Contrôle</p>
+        
+        <a href="{{ route('menus.rapports') }}" 
+           class="flex items-center p-3 rounded-lg transition-all {{ request()->routeIs('menus.rapports') ? 'bg-[#2E86C1] text-white shadow-lg' : 'text-white/70 hover:bg-[#2E86C1]/50 hover:text-white' }}">
+            <span class="text-sm font-medium">Rapports Financiers (RSF)</span>
+        </a>
+
+        <a href="{{ route('menus.audit') }}" 
+           class="flex items-center p-3 rounded-lg transition-all {{ request()->routeIs('menus.audit') ? 'bg-[#2E86C1] text-white shadow-lg' : 'text-white/70 hover:bg-[#2E86C1]/50 hover:text-white' }}">
+            <span class="text-sm font-medium">Vérification Interne</span>
+        </a>
+    </div>
+@endif
+
         @if(in_array($role, ['SPECIALISTE_MARCHE', 'ADMIN']))
         <div class="mb-6">
             <p class="text-[10px] font-bold text-white/40 uppercase px-3 mb-2 tracking-widest">Marchés Publics</p>
-            <a href="{{ route('passation.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('passation.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.passation') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.passation') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Plan de Passation</span>
             </a>
-            <a href="{{ route('marches.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('marches.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.marches') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.marches') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Dossiers d'Appel d'Offres</span>
             </a>
         </div>
@@ -56,13 +91,13 @@
         @if(in_array($role, ['CONTROLEUR_INTERNE', 'ADMIN']))
         <div class="mb-6">
             <p class="text-[10px] font-bold text-white/40 uppercase px-3 mb-2 tracking-widest">Audit & Rapports</p>
-            <a href="{{ route('audit.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('audit.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.audit') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.audit') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Analyses & Audit</span>
             </a>
-            <a href="{{ route('rapports.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('rapports.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.rapports') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.rapports') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Rapports BAD</span>
             </a>
-            <a href="{{ route('audit.logs') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('audit.logs') ? 'bg-[#2E86C1] text-white' : '' }}">
+            <a href="{{ route('menus.logs') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.logs') ? 'bg-[#2E86C1] text-white' : '' }}">
                 <span class="text-sm">Audit Logs</span>
             </a>
         </div>
@@ -72,8 +107,8 @@
             <p class="text-[10px] font-bold text-[#27AE60] uppercase px-3 mb-2 tracking-widest text-center lg:text-left">Communication</p>
             
             <div class="space-y-1">
-                <a href="{{ route('messages.index') }}" 
-   class="flex items-center justify-between p-3 rounded-lg bg-white/5 text-white hover:bg-[#2E86C1] transition-all group {{ request()->routeIs('messages.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+                <a href="{{ route('menus.messages') }}" 
+   class="flex items-center justify-between p-3 rounded-lg bg-white/5 text-white hover:bg-[#2E86C1] transition-all group {{ request()->routeIs('menus.messages') ? 'bg-[#2E86C1] text-white' : '' }}">
     <div class="flex items-center">
         <svg class="w-5 h-5 mr-3 text-white/70 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
@@ -83,8 +118,8 @@
     <span class="bg-[#ff4d4d] text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">3</span>
 </a>
 
-                <a href="{{ route('notifications.index') }}" 
-   class="flex items-center justify-between p-3 rounded-lg bg-white/5 text-white hover:bg-[#2E86C1] transition-all group {{ request()->routeIs('notifications.index') ? 'bg-[#2E86C1] text-white' : '' }}">
+                <a href="{{ route('menus.notifications') }}" 
+   class="flex items-center justify-between p-3 rounded-lg bg-white/5 text-white hover:bg-[#2E86C1] transition-all group {{ request()->routeIs('menus.notifications') ? 'bg-[#2E86C1] text-white' : '' }}">
     <div class="flex items-center">
         <svg class="w-5 h-5 mr-3 text-white/70 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>

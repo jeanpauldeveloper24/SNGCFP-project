@@ -5,10 +5,14 @@ import 'package:sngpbad_dashboard/dashboard.dart';
 import 'package:sngpbad_dashboard/models/user_model.dart';
 import 'package:sngpbad_dashboard/screens/accueille.dart';
 import 'package:sngpbad_dashboard/screens/audit.dart';
+import 'package:sngpbad_dashboard/screens/conventions.dart';
 import 'package:sngpbad_dashboard/screens/download.dart';
+import 'package:sngpbad_dashboard/screens/marche.dart';
+import 'package:sngpbad_dashboard/screens/marche_form.dart';
 import 'package:sngpbad_dashboard/screens/messages.dart';
 import 'package:sngpbad_dashboard/screens/planning.dart';
 import 'package:sngpbad_dashboard/screens/profile.dart';
+import 'package:sngpbad_dashboard/screens/rapport_travaux.dart';
 import 'package:sngpbad_dashboard/screens/setting.dart';
 import 'package:sngpbad_dashboard/screens/statistic.dart';
 import 'package:sngpbad_dashboard/screens/alerts_risks.dart';
@@ -17,6 +21,7 @@ import 'package:sngpbad_dashboard/screens/budget_execution.dart';
 import 'package:sngpbad_dashboard/screens/project_progress.dart';
 import 'package:sngpbad_dashboard/screens/market_tracking.dart';
 import 'package:sngpbad_dashboard/screens/sector_performance.dart';
+import 'package:sngpbad_dashboard/screens/submit_invoice.dart';
 import 'package:sngpbad_dashboard/screens/suivi_travaux.dart';
 
 class AppRoutes {
@@ -42,6 +47,10 @@ static const String submitInvoice = '/submit_invoice';
 static const String planning = '/planning';
 static const String paiements = '/paiements';
 static const String contrat = '/contrat';
+static const String marche = '/marche';
+static const String marcheform = '/marche_form';
+static const String rapportTravaux = '/rapport_travaux';
+static const String conventions = '/conventions';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -53,7 +62,7 @@ static const String contrat = '/contrat';
       rapport: (context) => const Rapport(),
       alertrisk: (context) => const AlertsRisks(),
       budget: (context) => const BudgetExecution(),
-      projets: (context) => const ProjectProgress(),
+      projets: (context) => const ProjectProgress(projects: [],),
       audit: (context) => const Audit(),
       download: (context) => const Download(),
       marches: (context) => const MarketTracking(),
@@ -61,6 +70,11 @@ static const String contrat = '/contrat';
       messages: (context) => const Messages(),
       planning: (context) => const Planning(),
       suiviTravaux: (context) => const SuiviTravaux(),
+      marche: (context) => const Marche(),
+      marcheform: (context) => MarcheForm(onSaved: (String objet, String procedure) {  },),
+      rapportTravaux: (context) => const RapportTravaux(),
+      submitInvoice: (context) => const SubmitInvoice(),
+      conventions: (context) => const Conventions(),
     };
   }
 

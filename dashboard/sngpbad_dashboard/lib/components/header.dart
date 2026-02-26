@@ -15,6 +15,9 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // URL vers ton dossier storage Laravel
+    const String storageBaseUrl = "http://127.0.0.1:8000/storage/";
+
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -25,48 +28,68 @@ class Header extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Titre de la plateforme ou indicateur de page
+          // Titre Institutionnel
           Text(
             "SYSTÈME NATIONAL DE GESTION DES PROJETS",
             style: GoogleFonts.montserrat(
               fontSize: 14, 
-              fontWeight: FontWeight.w600, 
+              fontWeight: FontWeight.w800, 
               color: const Color(0xFF1B4F72)
             ),
           ),
 
-          // Section Profil déplacée ici
+          // Bloc Profil (Nom, Rôle, Photo)
           InkWell(
             onTap: () => onSectionSelected(AppRoutes.profile),
-            child: Row(
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      user.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 14, 
-                        color: Colors.black87
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 14, 
+                          color: Colors.black87
+                        ),
                       ),
-                    ),
-                    Text(
-                      user.roleLabel,
-                      style: const TextStyle(
-                        fontSize: 11, 
-                        color: Colors.grey
+                      Text(
+                        user.roleLabel.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10, 
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF27AE60) // Vert pour le statut
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(width: 15),
+                  
+                  // Avatar avec bordure
+                  Container(
+                    padding: const EdgeInsets.all(2), // L'espace pour le liseré
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1B4F72),
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                const CircleAvatar(
-                  backgroundColor: Color(0xFF1B4F72),
-                  child: Icon(Icons.person, color: Colors.white, size: 20),
-                ),
-              ],
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.white,
+                      backgroundImage: user.photo != null 
+                          ? NetworkImage(storageBaseUrl + user.photo!) 
+                          : null,
+                      child: user.photo == null 
+                          ? const Icon(Icons.person, color: Color(0xFF1B4F72)) 
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -1,8 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sngpbad_dashboard/dashboard.dart';
-import 'package:sngpbad_dashboard/models/user_model.dart';
-
+import 'package:file_picker/file_picker.dart'; 
+import 'package:sngpbad_dashboard/services/auth.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -15,124 +15,129 @@ class _RegisterState extends State<Register> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  // Rôle par défaut
-  UserRole _selectedRole = UserRole.badRepresentative;
+  String _selectedRole = 'badRepresentative'; 
+  File? _selectedImage; // Stocke le fichier sélectionné
   bool _isObscured = true;
+  bool _isLoading = false;
 
-  // Couleurs institutionnelles (identiques au Login)
   final Color primaryBlue = const Color(0xFF1B4F72);
-  final Color backgroundGrey = const Color(0xFFF4F7F6);
 
-  void _handleRegister() {
+  final Map<String, String> roleLabels = {
+    'badRepresentative': "Représentant de la BAD",
+    'ministryOfTutelle': "Ministère de tutelle",
+    'nationalDirection': "Direction nationale",
+    'externalAuditor': "Auditeur externe",
+    'prestataire': "Prestataire / Entreprise",
+  };
+
+  /// Sélection d'image sur Windows
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+    );
+
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _selectedImage = File(result.files.single.path!);
+      });
+    }
+  }
+
+  void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
-      // Création de l'objet utilisateur à transmettre
-      final newUser = UserModel(
+      setState(() => _isLoading = true);
+
+      final authService = AuthService();
+      final success = await authService.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
         password: _passwordController.text,
         role: _selectedRole,
+        imageFile: _selectedImage, // On envoie le fichier ici
       );
 
-      // Notification de succès
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Inscription réussie !"),
-          backgroundColor: Color(0xFF27AE60),
-        ),
-      );
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-      // Navigation vers le Dashboard
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => Dashboard(user: newUser)),
-      );
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Compte créé avec succès !"), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'inscription"), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundGrey,
+      backgroundColor: const Color(0xFFF4F7F6),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 40),
           child: Container(
             width: 450,
             padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20)],
             ),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    "Création de compte",
-                    style: GoogleFonts.montserrat(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: primaryBlue,
+                  Text("Inscription SNGP-BAD", style: GoogleFonts.montserrat(fontSize: 22, fontWeight: FontWeight.bold, color: primaryBlue)),
+                  const SizedBox(height: 25),
+                  
+                  // --- SECTION PHOTO ---
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: _selectedImage != null ? FileImage(_selectedImage!) : null,
+                          child: _selectedImage == null ? Icon(Icons.camera_alt, color: primaryBlue, size: 30) : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(radius: 15, backgroundColor: primaryBlue, child: const Icon(Icons.add, size: 18, color: Colors.white)),
+                        )
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Rejoignez la plateforme SNGP-BAD",
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 35),
+                  const SizedBox(height: 30),
 
-                  // Champ Nom
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: "Nom complet",
-                      prefixIcon: Icon(Icons.badge_outlined, color: primaryBlue),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    validator: (v) => (v == null || v.isEmpty) ? "Nom requis" : null,
-                  ),
+                  _buildField(_nameController, "Nom complet", Icons.badge_outlined),
                   const SizedBox(height: 20),
-
-                  // Champ Email
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: "Email institutionnel",
-                      prefixIcon: Icon(Icons.email_outlined, color: primaryBlue),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    validator: (v) => (v == null || !v.contains('@')) ? "Email invalide" : null,
-                  ),
+                  _buildField(_emailController, "Email", Icons.email_outlined),
                   const SizedBox(height: 20),
-
-                  // Menu Déroulant Rôle
-                  DropdownButtonFormField<UserRole>(
+                  _buildField(_phoneController, "Téléphone", Icons.phone_android),
+                  const SizedBox(height: 20),
+                  
+                  DropdownButtonFormField<String>(
                     value: _selectedRole,
                     decoration: InputDecoration(
-                      labelText: "Votre institution / Rôle",
+                      labelText: "Rôle / Institution",
                       prefixIcon: Icon(Icons.account_tree_outlined, color: primaryBlue),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    items: UserRole.values.map((role) => DropdownMenuItem(
-                      value: role,
-                      child: Text(role.label, style: const TextStyle(fontSize: 14)),
-                    )).toList(),
+                    items: roleLabels.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                     onChanged: (val) => setState(() => _selectedRole = val!),
                   ),
                   const SizedBox(height: 20),
-
-                  // Champ Mot de passe
+                  
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _isObscured,
@@ -148,40 +153,15 @@ class _RegisterState extends State<Register> {
                     validator: (v) => (v == null || v.length < 6) ? "6 caractères min." : null,
                   ),
                   const SizedBox(height: 35),
-
-                  // Bouton S'inscrire
+                  
                   SizedBox(
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: _handleRegister,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        "S'INSCRIRE",
-                        style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
+                      onPressed: _isLoading ? null : _handleRegister,
+                      style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, foregroundColor: Colors.white),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("S'INSCRIRE"),
                     ),
-                  ),
-                  const SizedBox(height: 25),
-
-                  // Lien de retour
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Déjà un compte ?", style: GoogleFonts.inter(color: Colors.grey[600])),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          "Connectez-vous",
-                          style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -189,6 +169,18 @@ class _RegisterState extends State<Register> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildField(TextEditingController controller, String label, IconData icon) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: primaryBlue),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      validator: (v) => (v == null || v.isEmpty) ? "Requis" : null,
     );
   }
 }

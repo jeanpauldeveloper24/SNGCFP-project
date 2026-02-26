@@ -20,7 +20,7 @@
                 </div>
                 <p class="text-sm text-gray-600 mt-1">La composante <span class="font-bold">"Infrastructures"</span> a atteint 85% de son budget alloué. Une révision budgétaire pourrait être nécessaire.</p>
                 <div class="mt-3 flex gap-2">
-                    <a href="{{ route('budget.index') }}" class="text-[10px] font-bold bg-red-600 text-white px-3 py-1 rounded-md uppercase tracking-wider">Analyser le budget</a>
+                    <a href="{{ route('menus.budget') }}" class="text-[10px] font-bold bg-red-600 text-white px-3 py-1 rounded-md uppercase tracking-wider">Analyser le budget</a>
                 </div>
             </div>
         </div>
@@ -36,7 +36,7 @@
                 </div>
                 <p class="text-sm text-gray-600 mt-1">L'ouverture des plis pour le dossier <span class="font-bold text-[#1B4F72]">DAO-2026-T014</span> est prévue dans 48 heures.</p>
                 <div class="mt-3">
-                    <a href="{{ route('marches.index') }}" class="text-[10px] font-bold text-yellow-600 border border-yellow-600 px-3 py-1 rounded-md uppercase tracking-wider hover:bg-yellow-600 hover:text-white transition-all">Voir le dossier</a>
+                    <a href="{{ route('menus.marches') }}" class="text-[10px] font-bold text-yellow-600 border border-yellow-600 px-3 py-1 rounded-md uppercase tracking-wider hover:bg-yellow-600 hover:text-white transition-all">Voir le dossier</a>
                 </div>
             </div>
         </div>

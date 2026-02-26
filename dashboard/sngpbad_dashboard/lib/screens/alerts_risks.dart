@@ -1,98 +1,170 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sngpbad_dashboard/models/alerts_risks.dart';
 
-class AlertsRisks extends StatelessWidget {
+// --- ECRAN PRINCIPAL ---
+class AlertsRisks extends StatefulWidget {
   const AlertsRisks({super.key});
 
-  final Color primaryBlue = const Color(0xFF1B4F72);
+  @override
+  State<AlertsRisks> createState() => _AlertsRisksState();
+}
+
+class _AlertsRisksState extends State<AlertsRisks> {
+  List<RiskModel> allRisks = [];
+  List<RiskModel> filteredRisks = [];
+  bool isLoading = true;
+  String searchQuery = "";
+  String selectedLevel = "TOUS";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRisks();
+  }
+
+  Future<void> _fetchRisks() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/api/risks'),
+        headers: {'Authorization': 'Bearer ${prefs.getString('auth_token')}'},
+      );
+
+      if (response.statusCode == 200) {
+        List data = jsonDecode(response.body);
+        setState(() {
+          allRisks = data.map((item) => RiskModel(
+            id: item['id'],
+            title: item['title'],
+            level: item['level'],
+            label: item['label'],
+            projectName: item['project']['nom'],
+            updatedAt: DateTime.parse(item['updated_at']),
+          )).toList();
+          _filterData();
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _archiveRisk(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await http.put(
+      Uri.parse('http://127.0.0.1:8000/api/risks/$id/archive'),
+      headers: {'Authorization': 'Bearer ${prefs.getString('auth_token')}'},
+    );
+    _fetchRisks(); // Recharger la liste
+  }
+
+  void _filterData() {
+    setState(() {
+      filteredRisks = allRisks.where((r) {
+        final matchesName = r.title.toLowerCase().contains(searchQuery.toLowerCase());
+        final matchesLevel = selectedLevel == "TOUS" || r.level == selectedLevel;
+        return matchesName && matchesLevel;
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Tableau de Suivi des Risques",
-            style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: primaryBlue),
-          ),
-          const SizedBox(height: 20),
-          
-          // Section Risques Critiques
-          _buildCategoryHeader("CRITIQUE", Colors.red),
-          _buildRiskItem("Retard décaissement Tranche 2 - Projet Pont Abidjan", "ÉLEVÉ", Colors.red),
-          _buildRiskItem("Dépassement de budget matériel (Acier)", "CRITIQUE", Colors.red),
-          
-          const SizedBox(height: 20),
-          
-          // Section Risques Modérés
-          _buildCategoryHeader("MODÉRÉ", Colors.orange),
-          _buildRiskItem("Indisponibilité expert technique local", "MOYEN", Colors.orange),
-          _buildRiskItem("Risque météo (Saison des pluies)", "MODÉRÉ", Colors.orange),
-          
-          const SizedBox(height: 20),
-          
-          // Section Info/Faible
-          _buildCategoryHeader("MINEUR", Colors.blue),
-          _buildRiskItem("Mise à jour logiciel de saisie", "FAIBLE", Colors.blue),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        _buildSearchBar(),
+        _buildFilterChips(),
+        const SizedBox(height: 15),
+        Expanded(
+          child: isLoading 
+            ? const Center(child: CircularProgressIndicator()) 
+            : _buildList(),
+        ),
+      ],
     );
   }
 
-  Widget _buildCategoryHeader(String title, Color color) {
+  Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Icon(Icons.label_important_outline, color: color, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: color, letterSpacing: 1.2, fontSize: 12),
-          ),
-        ],
+      child: Text("Suivi des Risques (${filteredRisks.length})", 
+        style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      onChanged: (v) { searchQuery = v; _filterData(); },
+      decoration: InputDecoration(
+        hintText: "Rechercher...",
+        prefixIcon: const Icon(Icons.search),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       ),
     );
   }
 
-  // Voici ton code complété et fonctionnel
-  Widget _buildRiskItem(String title, String level, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border(left: BorderSide(color: color, width: 6)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5, offset: const Offset(0, 2))
-        ],
+  Widget _buildFilterChips() {
+    return Row(
+      children: ["TOUS", "CRITIQUE", "MODERE", "MINEUR"].map((lvl) => Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ChoiceChip(
+          label: Text(lvl, style: const TextStyle(fontSize: 10)),
+          selected: selectedLevel == lvl,
+          onSelected: (s) { setState(() { selectedLevel = lvl; _filterData(); }); },
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildList() {
+    return ListView.builder(
+      itemCount: filteredRisks.length,
+      itemBuilder: (context, index) => _buildRiskCard(filteredRisks[index]),
+    );
+  }
+
+  Widget _buildRiskCard(RiskModel risk) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(Icons.warning, color: risk.color),
+        title: Text(risk.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        subtitle: Text(risk.projectName, style: const TextStyle(fontSize: 11)),
+        trailing: TextButton(
+          onPressed: () => _showDetails(risk),
+          child: const Text("Détails"),
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text("Dernière analyse : il y a 2 heures", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-              ],
-            ),
+    );
+  }
+
+  void _showDetails(RiskModel risk) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(risk.title),
+        content: Text("Projet: ${risk.projectName}\nImportance: ${risk.label}"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Fermer")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              _archiveRisk(risk.id);
+              Navigator.pop(context);
+            },
+            child: const Text("Marquer comme résolu", style: TextStyle(color: Colors.white)),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              level,
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          )
         ],
       ),
     );

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // Pour les polices
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sngpbad_dashboard/authentification/register.dart';
 import 'package:sngpbad_dashboard/dashboard.dart';
-import 'package:sngpbad_dashboard/models/mock_data.dart';
+import 'package:sngpbad_dashboard/services/auth.dart';
+
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -16,26 +17,34 @@ class _LoginState extends State<Login> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isObscured = true;
+  bool _isLoading = false;
 
-  // Couleurs institutionnelles définies en dur
   final Color primaryBlue = const Color(0xFF1B4F72);
   final Color errorRed = const Color(0xFFE74C3C);
 
-  void _handleLogin() {
+  void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      try {
-        final user = testUsers.firstWhere(
-          (u) => u.email == _emailController.text.trim() && u.password == _passwordController.text,
-        );
+      setState(() => _isLoading = true);
+
+      final authService = AuthService();
+      final user = await authService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (user != null) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => Dashboard(user: user)),
         );
-      } catch (e) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Identifiants incorrects"), 
-            backgroundColor: errorRed
+            content: const Text("Identifiants incorrects ou serveur injoignable"),
+            backgroundColor: errorRed,
           ),
         );
       }
@@ -45,7 +54,7 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6), // Gris perle en fond
+      backgroundColor: const Color(0xFFF4F7F6),
       body: Center(
         child: Container(
           width: 420,
@@ -69,18 +78,18 @@ class _LoginState extends State<Login> {
                 _buildLogo(),
                 const SizedBox(height: 25),
                 Text(
-                  "SNGP-BAD", 
+                  "SNGP-BAD",
                   style: GoogleFonts.montserrat(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold, 
-                    color: primaryBlue
-                  )
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBlue,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Système National de Gestion des Projets", 
-                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]), 
-                  textAlign: TextAlign.center
+                  "Système National de Gestion des Projets",
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
                 TextFormField(
@@ -90,6 +99,7 @@ class _LoginState extends State<Login> {
                     prefixIcon: Icon(Icons.email_outlined, color: primaryBlue),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
+                  validator: (v) => (v == null || v.isEmpty) ? "Email requis" : null,
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
@@ -104,31 +114,33 @@ class _LoginState extends State<Login> {
                     ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
+                  validator: (v) => (v == null || v.isEmpty) ? "Mot de passe requis" : null,
                 ),
                 const SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
                     ),
-                    child: Text(
-                      "SE CONNECTER", 
-                      style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16)
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            "SE CONNECTER",
+                            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 25),
                 TextButton(
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Register())),
                   child: Text(
-                    "Pas de compte ? Créer un compte", 
-                    style: TextStyle(color: primaryBlue, fontWeight: FontWeight.w600)
+                    "Pas de compte ? Créer un compte",
+                    style: TextStyle(color: primaryBlue, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

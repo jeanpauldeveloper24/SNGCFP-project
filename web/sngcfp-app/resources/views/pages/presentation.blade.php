@@ -3,10 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Présentation DSID - SNGP-BAD</title>
+    <title>Équipe Projet SNGP-BAD</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,800&display=swap" rel="stylesheet" />
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans text-gray-900 antialiased bg-[#F4F7F6]">
@@ -16,50 +17,70 @@
     <main class="py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-bold text-[#1B4F72] mb-4 font-montserrat">
-                    Direction des Systèmes d'Informations et de Digitalisation
+            <div class="text-center mb-20">
+                <span class="text-[#27AE60] font-black uppercase tracking-[0.3em] text-xs">SNGP-BAD</span>
+                <h2 class="text-4xl font-extrabold text-[#1B4F72] mt-4 mb-6">
+                    L'Équipe de Digitalisation
                 </h2>
-                <p class="text-gray-600 max-w-4xl mx-auto leading-relaxed italic text-lg">
-                    La DSID est au cœur de la transformation numérique. Elle assure la conception, le déploiement et la sécurité 
-                    du <strong>SNGP-BAD</strong>, garantissant une gestion transparente et efficace des projets en Côte d'Ivoire.
+                <div class="h-1.5 w-24 bg-[#27AE60] mx-auto rounded-full"></div>
+                <p class="mt-8 text-gray-600 max-w-2xl mx-auto leading-relaxed text-lg">
+                    Une équipe d'experts de la <strong>DSID</strong> dédiée à la réussite du Système National de Gestion des Projets.
                 </p>
             </div>
 
-            <div class="text-center mb-12">
-                <span class="text-[#27AE60] font-bold uppercase tracking-[0.2em] text-xs">Organigramme Projet</span>
-                <h2 class="text-2xl font-bold text-[#1B4F72] mt-2 italic">Équipe de Direction et d'Exécution</h2>
-                <div class="h-1 w-24 bg-[#27AE60] mx-auto mt-3 rounded-full"></div>
-            </div>
-
-            <div class="flex flex-col items-center space-y-12">
+            <div class="flex flex-col items-center">
                 
-                <div class="w-full flex justify-center">
-                    <x-team-card :level="1" name="Toto Jean Paul" role="Directeur DSID" />
+                <div class="relative flex flex-col items-center">
+                    <x-team-card 
+                        :level="1" 
+                        name="M. Toto Hien Jean Paul" 
+                        role="Directeur de la DSID" 
+                    />
+                    <div class="h-16 w-1 bg-gradient-to-b from-[#27AE60] to-gray-300"></div>
                 </div>
 
-                <div class="w-full flex flex-row flex-wrap justify-center gap-8">
-                    <x-team-card :level="2" name="Koffi Kouadio Marc" role="Directeur Adjoint Technique" />
-                    <x-team-card :level="2" name="Konan Amenan Lucie" role="Directrice Adjointe Administrative" />
+                <div class="relative flex flex-col items-center">
+                    <x-team-card 
+                        :level="2" 
+                        name="Mme N'Guessan" 
+                        role="Sous-Directrice" 
+                    />
+                    <div class="h-16 w-1 bg-gray-300"></div>
                 </div>
 
-                <div class="w-full flex flex-row flex-wrap justify-center gap-6">
-                    <x-team-card :level="3" name="Traoré Bakary" role="Chef Dépt. Digitalisation" />
-                    <x-team-card :level="3" name="Soro Gnenema" role="Chef Dépt. Infrastructure" />
-                    <x-team-card :level="3" name="Diabaté Fatoumata" role="Chef Dépt. Sécurité" />
-                </div>
-
-                @for ($l = 4; $l <= 7; $l++)
-                    <div class="w-full flex flex-row flex-wrap justify-center gap-4">
-                        @for ($c = 1; $c <= $l; $c++)
-                            <x-team-card 
-                                :level="$l" 
-                                name="Membre {{ $l }}.{{ $c }}" 
-                                role="Poste Niveau {{ $l }}" 
-                            />
-                        @endfor
+                <div class="w-full flex flex-col items-center">
+                    <div class="h-px w-full max-w-4xl bg-gray-300"></div>
+                    
+                    <div class="flex justify-between w-full max-w-4xl">
+                        <div class="h-8 w-px bg-gray-300"></div>
+                        <div class="h-8 w-px bg-gray-300"></div>
+                        <div class="h-8 w-px bg-gray-300"></div>
+                        <div class="h-8 w-px bg-gray-300"></div>
                     </div>
-                @endfor
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full mt-4">
+                        <x-team-card 
+                            :level="3" 
+                            name="M. Gbaney" 
+                            role="Développeur" 
+                        />
+                        <x-team-card 
+                            :level="3" 
+                            name="M. Diarassouba" 
+                            role="Développeur" 
+                        />
+                        <x-team-card 
+                            :level="3" 
+                            name="M. Lela" 
+                            role="Développeur" 
+                        />
+                        <x-team-card 
+                            :level="3" 
+                            name="Kouassi Yao J.P. Danick" 
+                            role="Développeur Multimédia" 
+                        />
+                    </div>
+                </div>
 
             </div>
         </div>

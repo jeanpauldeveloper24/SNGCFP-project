@@ -63,7 +63,7 @@
             </div>
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-400">
     Affichage des dernières activités. 
-    <a href="{{ route('audit.logs.historique') }}" class="text-[#1B4F72] font-bold underline hover:text-[#27AE60] transition-colors">
+    <a href="{{ route('menus.sous-menus.historique') }}" class="text-[#1B4F72] font-bold underline hover:text-[#27AE60] transition-colors">
     Voir tout l'historique
 </a>
 </div>

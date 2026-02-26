@@ -37,47 +37,56 @@
         </section>
 
         <section class="py-12 bg-[#1B4F72]">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center"
-                     x-data="{ 
-                        shown: false,
-                        counts: { projets: 0, budget: 0, satisfaction: 0 },
-                        targets: { projets: 150, budget: 450, satisfaction: 100 },
-                        startCounter() {
-                            let duration = 2000; 
-                            Object.keys(this.targets).forEach(key => {
-                                let start = 0;
-                                let end = this.targets[key];
-                                let interval = duration / end;
-                                let timer = setInterval(() => {
-                                    if (this.counts[key] < end) {
-                                        this.counts[key]++;
-                                    } else {
-                                        clearInterval(timer);
-                                    }
-                                }, interval);
-                            });
-                        }
-                     }"
-                     x-intersect.once="shown = true; startCounter()">
-                    
-                    <div class="p-8 rounded-2xl border border-white/10 bg-white/5 transition-all hover:bg-white/10">
-                        <div class="text-[#27AE60] text-5xl font-black mb-2" x-text="counts.projets + '+'">0+</div>
-                        <div class="text-white text-xs font-bold uppercase tracking-[0.2em]">Projets Gérés</div>
-                    </div>
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center"
+             x-data="{ 
+                shown: false,
+                counts: { projets: 0, budget: 0, satisfaction: 0 },
+                targets: { 
+                    projets: {{ $stats['total_count'] }}, 
+                    budget: {{ round($stats['total_budget'] / 1000000) }}, 
+                    satisfaction: 100 
+                },
+                startCounter() {
+                    let duration = 2000; 
+                    Object.keys(this.targets).forEach(key => {
+                        let start = 0;
+                        let end = this.targets[key];
+                        if (end === 0) return;
+                        let interval = duration / end;
+                        let timer = setInterval(() => {
+                            if (this.counts[key] < end) {
+                                this.counts[key]++;
+                            } else {
+                                clearInterval(timer);
+                            }
+                        }, interval);
+                    });
+                }
+             }"
+             x-intersect.once="shown = true; startCounter()">
+            
+            <div class="p-8 rounded-2xl border border-white/10 bg-white/5 transition-all hover:bg-white/10">
+    <div class="text-[#27AE60] text-5xl font-black mb-2">
+        {{ $stats['total_count'] }}+
+    </div>
+    <div class="text-white text-xs font-bold uppercase tracking-[0.2em]">Projets Gérés</div>
+</div>
 
-                    <div class="p-8 rounded-2xl bg-white shadow-xl transform -translate-y-4">
-                        <div class="text-[#1B4F72] text-5xl font-black mb-2" x-text="counts.budget + 'M'">0M</div>
-                        <div class="text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">Budget Global (FCFA)</div>
-                    </div>
+<div class="p-8 rounded-2xl bg-white shadow-xl transform -translate-y-4">
+    <div class="text-[#1B4F72] text-5xl font-black mb-2">
+        {{ number_format(round($stats['total_budget'] / 1000000), 0, ',', ' ') }}M
+    </div>
+    <div class="text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">Budget Global (M FCFA)</div>
+</div>
 
-                    <div class="p-8 rounded-2xl border border-white/10 bg-white/5 transition-all hover:bg-white/10">
-                        <div class="text-[#27AE60] text-5xl font-black mb-2" x-text="counts.satisfaction + '%'">0%</div>
-                        <div class="text-white text-xs font-bold uppercase tracking-[0.2em]">Traçabilité & Audit</div>
-                    </div>
-                </div>
-            </div>
-        </section>
+<div class="p-8 rounded-2xl border border-white/10 bg-white/5 transition-all hover:bg-white/10">
+    <div class="text-[#27AE60] text-5xl font-black mb-2">100%</div>
+    <div class="text-white text-xs font-bold uppercase tracking-[0.2em]">Traçabilité & Audit</div>
+</div>
+        </div>
+    </div>
+</section>
 
         <section id="fonctionnalites" class="py-24">
             <div class="max-w-7xl mx-auto px-6">

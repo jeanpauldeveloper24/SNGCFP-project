@@ -9,6 +9,7 @@ import 'package:sngpbad_dashboard/screens/download.dart';
 import 'package:sngpbad_dashboard/screens/messages.dart';
 import 'package:sngpbad_dashboard/screens/planning.dart';
 import 'package:sngpbad_dashboard/screens/profile.dart';
+import 'package:sngpbad_dashboard/screens/rapport_travaux.dart';
 import 'package:sngpbad_dashboard/screens/setting.dart';
 import 'package:sngpbad_dashboard/screens/statistic.dart';
 import 'package:sngpbad_dashboard/screens/alerts_risks.dart';
@@ -17,6 +18,7 @@ import 'package:sngpbad_dashboard/screens/budget_execution.dart';
 import 'package:sngpbad_dashboard/screens/project_progress.dart';
 import 'package:sngpbad_dashboard/screens/market_tracking.dart';
 import 'package:sngpbad_dashboard/screens/sector_performance.dart';
+import 'package:sngpbad_dashboard/screens/submit_invoice.dart';
 import 'package:sngpbad_dashboard/screens/suivi_travaux.dart';
 
 class Content extends StatefulWidget {
@@ -59,7 +61,7 @@ class _ContentState extends State<Content> {
       case AppRoutes.profile: return Profile(user: widget.user);
       case AppRoutes.settings: return const Setting();
       case AppRoutes.budget: return const BudgetExecution();
-      case AppRoutes.projets: return const ProjectProgress();
+      case AppRoutes.projets: return const ProjectProgress(projects: [],);
       case AppRoutes.alertrisk: return const AlertsRisks();
       case AppRoutes.rapport: return const Rapport();
       case AppRoutes.marches: return const MarketTracking();
@@ -70,6 +72,8 @@ class _ContentState extends State<Content> {
       case AppRoutes.contrat: return const Contrat();
       case AppRoutes.planning: return const Planning();
       case AppRoutes.suiviTravaux: return const SuiviTravaux();
+      case AppRoutes.submitInvoice: return const SubmitInvoice();
+      case AppRoutes.rapportTravaux: return const RapportTravaux();
       
       default: return _buildAutreVue();
     }
