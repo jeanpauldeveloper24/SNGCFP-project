@@ -26,19 +26,23 @@
                         {{ $header ?? 'Tableau de bord' }}
                     </h2>
                     
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                            <p class="text-sm font-bold text-gray-800 leading-none">
-                                {{ Auth::user()->name }}
-                            </p>
-                            <p class="text-[10px] text-[#27AE60] font-extrabold uppercase tracking-widest mt-1">
-                                {{ Auth::user()->role ?: 'UTILISATEUR' }}
-                            </p>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-[#1B4F72] flex items-center justify-center text-white font-bold shadow-md border-2 border-gray-50">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                        </div>
-                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="hidden lg:block text-right">
+        <p class="text-sm font-bold text-[#1B4F72]">{{ Auth::user()->name }}</p>
+        <p class="text-[10px] text-[#27AE60] font-bold uppercase">{{ Auth::user()->role->name ?? '' }}</p>
+    </div>
+    @if(Auth::user()->photo)
+        {{-- On affiche la photo si elle existe --}}
+        <img src="{{ asset('storage/' . Auth::user()->photo) }}" 
+             alt="Profile" 
+             class="w-10 h-10 rounded-full object-cover border-2 border-[#2E86C1]">
+    @else
+        {{-- Sinon on garde le cercle avec l'initiale --}}
+        <div class="w-10 h-10 rounded-full bg-[#1B4F72] flex items-center justify-center text-white font-bold border-2 border-white/20">
+            {{ substr(Auth::user()->name, 0, 1) }}
+        </div>
+    @endif
+</div>
                 </div>
             </header>
 

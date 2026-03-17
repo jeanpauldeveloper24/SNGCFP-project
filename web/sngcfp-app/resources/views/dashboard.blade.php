@@ -27,7 +27,7 @@
         <p class="text-gray-600 italic">
             Bienvenue dans votre espace de gestion transactionnelle <strong>SNGP-BAD</strong>. 
             Utilisez le menu latéral pour accéder aux différentes fonctionnalités de votre rôle : 
-            <span class="text-[#27AE60] font-bold">{{ Auth::user()->role }}</span>.
+            <span class="text-[#27AE60] font-bold">{{ Auth::user()->role->name }}</span>.
         </p>
     </div>
 </x-app-layout>
