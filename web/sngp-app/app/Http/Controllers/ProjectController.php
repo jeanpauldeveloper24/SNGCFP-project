@@ -1,0 +1,560 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Project;
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Paiement;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\Request;
+use App\Models\Market;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+
+class ProjectController extends Controller
+{
+    /**
+     * Affiche la liste des projets selon le rôle
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        $roleName = $user->role->name;
+
+        // Si c'est l'UGP, il ne voit STRICTEMENT que ses projets créés
+        if ($roleName === 'ugp') {
+            $projets = Project::where('user_id', $user->id)->with('modules')->get();
+        } else {
+            // Les autres rôles (Admin, Ministre, Ordonnateur) voient TOUT
+            $projets = Project::with(['user', 'modules'])->get();
+        }
+
+        return view('profile.menus.projets_liste', compact('projets', 'roleName'));
+    }
+
+    /**
+     * Affichage de la console d'arbitrage budgétaire réel avec Taux de change API
+     */
+    public function budget()
+    {
+        // 1. Récupérer le taux USD -> XOF avec mise en cache de 6 heures
+        $usdToXof = Cache::remember('usd_to_xof_rate', now()->addHours(6), function () {
+            try {
+                $apiKey = env('EXCHANGERATE_API_KEY');
+$response = Http::withoutVerifying()->get("https://v6.exchangerate-api.com/v6/{$apiKey}/latest/USD");
+    
+                if ($response->successful()) {
+                    $data = $response->json();
+                    return $data['conversion_rates']['XOF'] ?? 605.20;
+                }
+            } catch (\Exception $e) {
+                return 605.20; 
+            }
+            return 605.20;
+        });
+
+        // 2. Charger les projets avec leurs paiements pour éviter le problème de requêtes N+1
+        $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
+
+        // 3. Récupérer l'historique des réallocations de manière sécurisée
+        $revisions = collect(); 
+        if (Schema::hasTable('budget_revisions')) {
+            // Si ton modèle BudgetRevision existe, tu pourras décommenter la ligne ci-dessous :
+            // $revisions = \App\Models\BudgetRevision::with(['sourceProject', 'targetProject'])->latest()->get();
+            $revisions = DB::table('budget_revisions')->get();
+        }
+
+        // 4. Passer toutes les variables indispensables à la vue unique
+        return view('profile.menus.budget', compact('projects', 'revisions', 'usdToXof'));
+    }
+
+    /**
+     * Affiche le formulaire de modification d'étape pour un marché spécifique
+     */
+    public function editEtape($id)
+    {
+        $user = Auth::user();
+        $roleName = $user->role->name;
+
+        $marche = Market::with('project')->findOrFail($id);
+
+        if ($roleName === 'ugp' && $marche->project->user_id !== $user->id) {
+            abort(403, "Action non autorisée.");
+        }
+
+        return view('profile.menus.passation.form', compact('marche', 'roleName'));
+    }
+
+    /**
+     * Traite la mise à jour réelle de l'étape en base de données
+     */
+    public function updateEtape(Request $request, $id)
+    {
+        $request->validate([
+            'etape' => 'required|string',
+            'date_changement' => 'required|date',
+            'commentaire' => 'required|string|min:10',
+            'document_justificatif' => 'nullable|file|mimes:pdf|max:4096', // Max 4Mo
+        ]);
+
+        $marche = Market::findOrFail($id);
+
+        if ($request->hasFile('document_justificatif')) {
+            $path = $request->file('document_justificatif')->store('justificatifs_passation', 'public');
+        }
+
+        $marche->etape = $request->input('etape');
+        $marche->save();
+
+        return redirect()->route('passation.index')->with('success', "L'étape du dossier {$marche->numero_reference} a été mise à jour avec succès.");
+    }
+
+    /**
+     * Affiche l'espace de suivi des finances.
+     */
+    public function finances()
+    {
+        return view('profile.menus.finances'); 
+    }
+
+    /**
+     * Console de la Comptabilité Financière & Engagements (Données Réelles)
+     */
+    public function comptabiliteFinanciere()
+    {
+        $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
+
+        $dotationTotale = 0;
+        $totalEngage = 0;
+        $totalPaye = 0;
+
+        $situationFinanciere = $projects->map(function ($project) use (&$dotationTotale, &$totalEngage, &$totalPaye) {
+            $dotation = $project->budget_value; 
+            $engage = $project->paiements->whereIn('status', ['valide', 'engage', 'paye', 'effectue'])->sum('montant');
+            $paye = $project->paiements->whereIn('status', ['paye', 'effectue'])->sum('montant');
+
+            $dotationTotale += $dotation;
+            $totalEngage += $engage;
+            $totalPaye += $paye;
+
+            $tauxEngagement = $dotation > 0 ? ($engage / $dotation) * 100 : 0;
+            $tauxAbsorption = $dotation > 0 ? ($paye / $dotation) * 100 : 0;
+
+            return [
+                'code'            => $project->code,
+                'nom'             => $project->nom,
+                'dotation'        => $dotation,
+                'engage'          => $engage,
+                'paye'            => $paye,
+                'taux_engagement' => $tauxEngagement,
+                'taux_absorption' => $tauxAbsorption,
+            ];
+        });
+
+        $tauxEngagementGlobal = $dotationTotale > 0 ? ($totalEngage / $dotationTotale) * 100 : 0;
+        $tauxDecaissementGlobal = $dotationTotale > 0 ? ($totalPaye / $dotationTotale) * 100 : 0;
+
+        return view('profile.menus.comptabilite.comptabilite_financiere', compact(
+            'dotationTotale',
+            'totalEngage',
+            'totalPaye',
+            'tauxEngagementGlobal',
+            'tauxDecaissementGlobal',
+            'situationFinanciere'
+        ));
+    }
+
+    /**
+     * Console de Contrôle de Gestion et Performance Opérationnelle
+     */
+    public function comptabiliteGestion()
+    {
+        $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
+
+        $nombreProjets = $projects->count();
+        $totalBudgetGlobal = $projects->sum('budget_value');
+        $totalDecaisse = Paiement::whereIn('status', ['paye', 'effectue'])->sum('montant');
+        
+        $coutMoyenProjet = $nombreProjets > 0 ? ($totalDecaisse / $nombreProjets) : 0;
+        $ratioTerrain = $totalBudgetGlobal > 0 ? ($totalDecaisse / $totalBudgetGlobal) * 100 : 0;
+
+        $coutFonctionnement = $projects->filter(function($project) {
+            return str_contains(strtolower($project->code), 'fonc') || 
+                   str_contains(strtolower($project->nom), 'fonctionnement') ||
+                   str_contains(strtolower($project->nom), 'logistique');
+        })->map(function($project) {
+            return $project->paiements->whereIn('status', ['paye', 'effectue'])->sum('montant');
+        })->sum();
+
+        $totalAvenants = Schema::hasColumn('projects', 'avenants_value') 
+            ? $projects->sum('avenants_value') 
+            : 0;
+
+        $analysesGestion = $projects->map(function ($project) {
+            $budgetAlloue = $project->budget_value;
+            $consommationReelle = $project->paiements->whereIn('status', ['paye', 'effectue'])->sum('montant');
+            
+            $ratioPerformance = $budgetAlloue > 0 ? ($consommationReelle / $budgetAlloue) * 100 : 0;
+            
+            $statusGestion = 'Optimale';
+            if ($ratioPerformance > 90) {
+                $statusGestion = 'Alerte Surconsommation';
+            } elseif ($ratioPerformance < 30 && $consommationReelle > 0) {
+                $statusGestion = 'Sous-exécution Opérationnelle';
+            } elseif ($consommationReelle == 0) {
+                $statusGestion = 'En Attente de Démarrage';
+            }
+
+            return [
+                'code'              => $project->code,
+                'nom'               => $project->nom,
+                'budget'            => $budgetAlloue,
+                'consommation'      => $consommationReelle,
+                'ratio_performance' => $ratioPerformance,
+                'status_gestion'    => $statusGestion,
+            ];
+        });
+
+        return view('profile.menus.comptabilite.comptabilite_gestion', compact(
+            'nombreProjets',
+            'totalDecaisse',
+            'coutMoyenProjet',
+            'ratioTerrain',
+            'coutFonctionnement',
+            'totalAvenants', 
+            'analysesGestion'
+        ));
+    }
+
+    public function comptabiliteActif()
+    {
+        $projects = Project::with(['modules.market.paiements', 'paiements'])->orderBy('code', 'asc')->get();
+        $totalAllocated = $projects->sum('budget_value');
+        
+        $totalDisbursed = 0;
+        foreach ($projects as $project) {
+            $totalDisbursed += $project->paiements()->where('status', 'Effectué')->sum('montant');
+        }
+
+        return view('profile.menus.comptabilite.comptabilite_actif', compact(
+            'projects',
+            'totalAllocated',
+            'totalDisbursed'
+        ));
+    }
+
+    public function comptabiliteCaisse()
+    {
+        $fluxCaisse = Paiement::with(['project', 'market'])
+            ->where('status', 'Effectué')
+            ->orderBy('date_paiement', 'desc')
+            ->get();
+
+        $dotationInitialeBAD  = Project::where('devise', '!=', 'XOF')->sum('budget_value'); 
+        $dotationInitialeEtat = Project::where('devise', 'XOF')->sum('budget_value');
+
+        $decaissesBAD = $fluxCaisse->filter(function ($p) {
+            return ($p->devise ?? 'XOF') !== 'XOF' || str_contains(strtolower($p->etape_administrative ?? ''), 'bad');
+        })->sum('montant');
+
+        $decaissesEtat = $fluxCaisse->filter(function ($p) {
+            return ($p->devise ?? 'XOF') === 'XOF' && !str_contains(strtolower($p->etape_administrative ?? ''), 'bad');
+        })->sum('montant');
+
+        $totalDecaisse = $decaissesBAD + $decaissesEtat;
+
+        $soldeBAD  = $dotationInitialeBAD - $decaissesBAD;
+        $soldeEtat = $dotationInitialeEtat - $decaissesEtat;
+        $soldeGlobal = $soldeBAD + $soldeEtat;
+
+        return view('profile.menus.comptabilite.comptabilite_caisse', compact(
+            'fluxCaisse',
+            'soldeGlobal',
+            'soldeBAD',
+            'soldeEtat',
+            'totalDecaisse'
+        ));
+    }
+
+    public function comptabiliteMonetaire()
+{
+    // 1. Récupération du taux USD -> XOF via le cache (identique à la page budget)
+    $usdToXof = Cache::remember('usd_to_xof_rate', now()->addHours(6), function () {
+        try {
+            $apiKey = env('EXCHANGERATE_API_KEY');
+$response = Http::withoutVerifying()->get("https://v6.exchangerate-api.com/v6/{$apiKey}/latest/USD");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['conversion_rates']['XOF'] ?? 605.20;
+            }
+        } catch (\Exception $e) {
+            return 605.20; 
+        }
+        return 605.20;
+    });
+
+    // 2. Récupération des projets et calcul des enveloppes réelles globales
+    $projets = Project::all();
+    $enveloppeGlobale = $projets->sum('budget_value');
+    
+    // Ventilation réelle des budgets initiaux par devise/financeur
+    $enveloppeBAD  = $projets->where('devise', '!=', 'XOF')->sum('budget_value');
+    $enveloppeEtat = $projets->where('devise', 'XOF')->sum('budget_value');
+
+    // 3. Récupération de tous les flux de décaissements réels validés
+    $decaissements = Paiement::with(['project', 'market'])->where('status', 'Effectué')->get();
+    $totalDecaisse = $decaissements->sum('montant');
+
+    // Ventilation réelle des décaissements
+    $decaisseBAD = $decaissements->filter(function ($p) {
+        return ($p->devise ?? 'XOF') !== 'XOF' || str_contains(strtolower($p->etape_administrative ?? ''), 'bad');
+    })->sum('montant');
+
+    $decaisseEtat = $decaissements->filter(function ($p) {
+        return ($p->devise ?? 'XOF') === 'XOF' && !str_contains(strtolower($p->etape_administrative ?? ''), 'bad');
+    })->sum('montant');
+
+    // 4. Calcul des gains et pertes de change réels
+    $totalGainsChange  = $decaissements->sum('gain_change' ?? 0); 
+    $totalPertesChange = $decaissements->sum('perte_change' ?? 0);
+
+    // 5. Calcul des soldes monétaires réels et des taux d'exécution financiers
+    $soldeGlobal = $enveloppeGlobale - $totalDecaisse;
+    $soldeBAD    = $enveloppeBAD - $decaisseBAD;
+    $soldeEtat   = $enveloppeEtat - $decaisseEtat;
+
+    // Calcul des taux réels
+    $tauxExecutionGlobal = $enveloppeGlobale > 0 ? round(($totalDecaisse / $enveloppeGlobale) * 100, 2) : 0;
+    $tauxExecutionBAD    = $enveloppeBAD > 0 ? round(($decaisseBAD / $enveloppeBAD) * 100, 2) : 0;
+    $tauxExecutionEtat   = $enveloppeEtat > 0 ? round(($decaisseEtat / $enveloppeEtat) * 100, 2) : 0;
+
+    // 6. Envoi de TOUTES les variables, incluant désormais 'usdToXof'
+    return view('profile.menus.comptabilite.comptabilite_monetaire', compact(
+        'projets',
+        'enveloppeGlobale',
+        'enveloppeBAD',
+        'enveloppeEtat',
+        'totalDecaisse',
+        'decaisseBAD',
+        'decaisseEtat',
+        'soldeGlobal',
+        'soldeBAD',
+        'soldeEtat',
+        'tauxExecutionGlobal',
+        'tauxExecutionBAD',
+        'tauxExecutionEtat',
+        'totalGainsChange',
+        'totalPertesChange',
+        'decaissements',
+        'usdToXof' // <-- Ajouté ici pour corriger l'erreur Blade
+    ));
+}
+
+    /**
+     * Affiche la console de suivi des paiements.
+     */
+    public function paiements()
+    {
+        $totalPaiements = 0; 
+        return view('profile.menus.paiements', compact('totalPaiements'));
+    }
+
+    /**
+     * Afficher le Plan de Passation des Marchés.
+     */
+    public function passation()
+    {
+        return view('profile.menus.passation'); 
+    }
+
+    public function dashboard()
+    {
+        $projects = Project::with('modules')->get(); 
+        return view('profile.menus.projects.list', compact('projects'));
+    }
+    
+   /**
+ * Enregistre un projet, effectue les conversions de devises, 
+ * calcule le plan de financement et lie ses modules associés.
+ */
+public function store(StoreProjectRequest $request)
+{
+    DB::transaction(function () use ($request) {
+        // 1. Récupération des données brutes du formulaire
+        $budgetInitial = $request->budget_initial;
+        $devise = $request->budget_devise;
+        
+        // Par défaut, si la devise est déjà le XOF, le taux est de 1 et la valeur reste identique
+        $tauxChange = $request->input('taux_change', 1.00); 
+        $budgetValueXof = $budgetInitial;
+
+        // 2. Logique de conversion automatique si devise étrangère (ex: USD)
+        if (strtoupper($devise) !== 'XOF') {
+            // On utilise le taux saisi ou récupéré depuis ton gestionnaire de devises
+            $budgetValueXof = $budgetInitial * $tauxChange;
+        }
+
+        // 3. Calcul des ventilations financières (Ex: 80% / 20%) reçues depuis le formulaire
+        // On stocke ces montants convertis en XOF pour la consolidation étatique
+        $pourcentageBailleur = $request->input('pourcentage_bailleur', 100); // par défaut 100%
+        $pourcentageEtat = $request->input('pourcentage_etat', 0);
+
+        $financementBailleurXof = ($budgetValueXof * $pourcentageBailleur) / 100;
+        $financementEtatXof = ($budgetValueXof * $pourcentageEtat) / 100;
+
+        // 4. Création du projet avec les attributs enrichis
+        $project = Project::create([
+            'code' => $request->code,
+            'nom' => $request->nom,
+            'description' => $request->description,
+            'budget_initial' => $budgetInitial,
+            'budget_devise' => $devise,
+            'budget_value' => $budgetValueXof, // Pivot XOF calculé
+            'taux_change' => $tauxChange,
+            'financement_bailleur' => $financementBailleurXof,
+            'financement_etat' => $financementEtatXof,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'taux_execution' => 0.00,
+            'status' => 'brouillon', // Le workflow démarre en brouillon (Rôle UGP)
+            'user_id' => Auth::id(), 
+        ]);
+
+        // 5. Création des modules associés
+        if ($request->has('modules') && is_array($request->modules)) {
+            foreach ($request->modules as $moduleData) {
+                // Si tes modules ont aussi besoin de conversion, applique la même logique ici
+                $moduleBudgetInitial = $moduleData['budget_value']; // (valeur brute du module)
+                $moduleBudgetValueXof = strtoupper($devise) !== 'XOF' 
+                    ? $moduleBudgetInitial * $tauxChange 
+                    : $moduleBudgetInitial;
+
+                $project->modules()->create([
+                    'number' => $moduleData['number'],
+                    'description' => $moduleData['description'],
+                    'budget_value' => $moduleBudgetValueXof, // Alignement sur la valeur pivot XOF
+                    'budget_devise' => $devise,
+                    'duree' => $moduleData['duree'],
+                    'status' => 'Non débuté', 
+                ]);
+            }
+        }
+    });
+
+    // Attention à l'orthographe exacte de ta route finale (.projects. ou .projets.)
+    return redirect()
+        ->route('profile.menus.projects.list')
+        ->with('success', 'Le projet institutionnel et ses composantes ont été initialisés avec succès.');
+}
+
+    /**
+     * Formulaire d'ajout -> form.blade.php
+     */
+    public function create()
+    {
+        return view('profile.menus.projects.form'); 
+    }
+
+    public function passationCreate()
+{
+    // Eager load obligatoire des modules pour que le JS puisse lire les composantes
+    $projects = Project::with('modules')->get(); 
+
+    return view('profile.menus.passation.create', compact('projects'));
+}
+
+public function passationIndex()
+{
+    $user = Auth::user();
+    $roleName = $user->role->name;
+
+    if ($roleName === 'ugp') {
+        // Filtrage direct et performant grâce à la colonne project_id
+        $marches = Market::whereHas('project', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->with(['project', 'module'])->get();
+    } else {
+        // Chargement global pour les autres rôles
+        $marches = Market::with(['project', 'module'])->get();
+    }
+
+    return view('profile.menus.passation.list', compact('marches', 'roleName'));
+} 
+
+public function edit($id)
+{
+    // On récupère le projet avec ses composantes (modules)
+    $project = Project::with('modules')->findOrFail($id);
+
+    // On charge le fichier form.blade.php en lui injectant le projet
+    return view('profile.menus.projects.form', compact('project'));
+}
+
+public function update(Request $request, $id)
+{
+    // 1. Validation des données du formulaire
+    $validated = $request->validate([
+        'code' => 'required|string|max:255|unique:projects,code,' . $id,
+        'nom' => 'required|string|max:255',
+        'budget_initial' => 'required|numeric|min:0',
+        'budget_devise' => 'required|string|max:3',
+        'taux_change' => 'required|numeric|min:0',
+        'pourcentage_bailleur' => 'required|numeric|min:0|max:100',
+        'pourcentage_etat' => 'required|numeric|min:0|max:100',
+        'description' => 'nullable|string',
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after_or_equal:start_date',
+        
+        // Validation du tableau des modules
+        'modules' => 'required|array|min:1',
+        'modules.*.number' => 'required|integer',
+        'modules.*.description' => 'required|string|max:255',
+        'modules.*.budget_value' => 'required|numeric|min:0',
+        'modules.*.duree' => 'required|string|max:255',
+    ]);
+
+    // 2. Récupération et mise à jour du projet
+    $project = Project::findOrFail($id);
+    
+    // Calcul de la valeur convertie (si tu as un champ budget_value calculé en base)
+    $budgetValueCalculated = $request->budget_initial * $request->taux_change;
+
+    $project->update([
+        'code' => $request->code,
+        'nom' => $request->nom,
+        'budget_initial' => $request->budget_initial,
+        'budget_devise' => $request->budget_devise,
+        'taux_change' => $request->taux_change,
+        'budget_value' => $budgetValueCalculated, // Optionnel selon ta structure de table
+        'pourcentage_bailleur' => $request->pourcentage_bailleur,
+        'pourcentage_etat' => $request->pourcentage_etat,
+        'description' => $request->description,
+        'start_date' => $request->start_date,
+        'end_date' => $request->end_date,
+    ]);
+
+    // 3. Synchronisation des modules (Composantes)
+// On purge les anciens modules du projet
+$project->modules()->delete();
+
+// On réinsère les modules avec les nouvelles données et la bonne devise
+foreach ($request->modules as $moduleData) {
+    $project->modules()->create([
+        'number'       => $moduleData['number'],
+        'description'  => $moduleData['description'],
+        'budget_value' => $moduleData['budget_value'],
+        'duree'        => $moduleData['duree'],
+        'budget_devise'=> $request->budget_devise, // 💡 CORRECTION ICI : On transmet la devise globale du projet
+    ]);
+}
+
+    // 4. Redirection avec un message de succès
+    return redirect()->route('profile.menus.projects.list')
+                     ->with('success', 'Le projet a été mis à jour avec succès (passage en ' . $request->budget_devise . ').');
+}
+
+}

@@ -38,6 +38,8 @@ dependencies:
   http: ^1.6.0
   shared_preferences: ^2.5.4
   file_picker: ^10.3.10
+  hashlib: ^2.3.0
+  secure_session: ^1.0.5
 
 dev_dependencies:
   flutter_test:

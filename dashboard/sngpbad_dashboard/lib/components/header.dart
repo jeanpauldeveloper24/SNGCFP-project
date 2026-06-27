@@ -1,3 +1,4 @@
+import 'dart:convert'; // Nécessaire pour base64Decode
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:sngpbad_dashboard/models/user_model.dart';
@@ -15,9 +16,6 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // URL vers ton dossier storage Laravel
-    const String storageBaseUrl = "http://127.0.0.1:8000/storage/";
-
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -28,7 +26,7 @@ class Header extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Titre Institutionnel
+          // Titre du Dashboard
           Text(
             "SYSTÈME NATIONAL DE GESTION DES PROJETS",
             style: GoogleFonts.montserrat(
@@ -38,7 +36,7 @@ class Header extends StatelessWidget {
             ),
           ),
 
-          // Bloc Profil (Nom, Rôle, Photo)
+          // Bloc Profil Utilisateur
           InkWell(
             onTap: () => onSectionSelected(AppRoutes.profile),
             borderRadius: BorderRadius.circular(8),
@@ -59,31 +57,34 @@ class Header extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        user.roleLabel.toUpperCase(),
+                        user.roleName.toUpperCase(),
                         style: const TextStyle(
                           fontSize: 10, 
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF27AE60) // Vert pour le statut
+                          fontWeight: FontWeight.w600, 
+                          color: Color(0xFF27AE60)
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(width: 15),
                   
-                  // Avatar avec bordure
+                  // Avatar avec gestion multi-sources (URL ou Base64)
                   Container(
-                    padding: const EdgeInsets.all(2), // L'espace pour le liseré
+                    padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF1B4F72),
-                      shape: BoxShape.circle,
+                      color: Color(0xFF1B4F72), 
+                      shape: BoxShape.circle
                     ),
                     child: CircleAvatar(
                       radius: 20,
                       backgroundColor: Colors.white,
-                      backgroundImage: user.photo != null 
-                          ? NetworkImage(storageBaseUrl + user.photo!) 
+                      backgroundImage: user.photo.isNotEmpty 
+                          ? (user.photo.startsWith('http') 
+                              ? NetworkImage(user.photo) 
+                              // --- DÉCODAGE BASE64 ICI ---
+                              : MemoryImage(base64Decode(user.photo))) as ImageProvider
                           : null,
-                      child: user.photo == null 
+                      child: user.photo.isEmpty 
                           ? const Icon(Icons.person, color: Color(0xFF1B4F72)) 
                           : null,
                     ),

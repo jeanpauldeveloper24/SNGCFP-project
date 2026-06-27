@@ -1,156 +1,137 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hashlib/hashlib.dart'; 
+import 'package:secure_session/secure_session.dart'; 
 import 'package:sngpbad_dashboard/models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = "http://127.0.0.1:8000/api";
+  static const String baseUrl = "https://sngcfp-default-rtdb.firebaseio.com";
+  static const String authSecret = "YPA4oS4yVcgTGR5F3HUBP8ZQWYMH8mww8BTJYCB4";
+  
+  late SecureSession _secureSession;
 
-  /// Connexion
+  AuthService() {
+    _secureSession = SecureSession(options: [
+      SessionOptions(
+        cookieName: 'sngp_session',
+        defaultSessionName: 'session',
+        expiry: const Duration(days: 7),
+        // La clé doit faire exactement 16 caractères pour être valide
+        secret: 'SNGBAD_2026_PROT', 
+      ),
+    ]);
+    _secureSession.init([]); 
+  }
+
+  /// SOLUTION DE DERNIER RECOURS : Fonction globale sha256sum
+  String _hashPassword(String data) {
+    return sha256sum(data).toString();
+  }
+
+  // Connexion d'un utilisateur déjà inscrit
   Future<UserModel?> login(String email, String password) async {
     try {
+      final String cleanEmail = email.trim().toLowerCase();
+      
+      // OPTIMISATION CRUCIALE : On filtre directement par email via l'API REST de Firebase
+      // Cela évite de télécharger toute la table des utilisateurs.
+      final String filterUrl = '$baseUrl/users.json?auth=$authSecret&orderBy="email"&equalTo="$cleanEmail"';
+      
+      final response = await http.get(Uri.parse(filterUrl));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic>? users = jsonDecode(response.body);
+        
+        // Si aucun utilisateur ne correspond à cet email
+        if (users == null || users.isEmpty) {
+          print("❌ Aucun utilisateur trouvé avec cet email.");
+          return null;
+        }
+
+        // Firebase renvoie un dictionnaire avec l'identifiant unique (ID) en clé
+        String foundId = users.keys.first;
+        Map<String, dynamic> userData = Map<String, dynamic>.from(users[foundId]);
+        
+        // Hachage du mot de passe saisi pour comparaison
+        String hashedInput = _hashPassword(password);
+
+        // Vérification du mot de passe
+        if (userData['password']?.toString() == hashedInput) {
+          final user = UserModel.fromJson(foundId, userData);
+          
+          // Sécurité additionnelle : Seuls les rôles Flutter Desktop passent
+          if (user.platform != "flutter_desktop") {
+            print("🚫 Accès refusé : Cette plateforme n'est pas autorisée pour votre rôle.");
+            return null;
+          }
+
+          // Initialisation de la session sécurisée
+          _secureSession.write(foundId, 'user_session_id');
+          _secureSession.write(user.roleName, 'user_role');
+          _secureSession.write('true', 'is_logged_in');
+
+          print("✅ Session active pour : ${user.name}");
+          return user;
+        } else {
+          print("❌ Mot de passe incorrect.");
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Erreur Login: $e");
+      return null;
+    }
+  }
+
+  // Création d'un utilisateur
+  Future<String?> register(UserModel user) async {
+    try {
+      // 1. On génère le hash SHA-256 du mot de passe en clair
+      String hashedPassword = _hashPassword(user.password);
+      
+      // 2. On nettoie l'email (minuscules et sans espaces) pour éviter les erreurs de frappe
+      String cleanEmail = user.email.trim().toLowerCase();
+      
+      // 3. CRUCIAL : On crée une COPIE de l'utilisateur avec le mot de passe haché et l'email propre
+      final securedUser = user.copyWith(
+        password: hashedPassword,
+        email: cleanEmail
+      );
+
+      print("🚀 Envoi Firebase (Mot de passe haché) : ${securedUser.email}");
+
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          'device_name': 'windows_desktop_app',
-        }),
+        Uri.parse("$baseUrl/users.json?auth=$authSecret"),
+        body: json.encode(securedUser.toJson()),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        final userData = data['user'];
-        final String token = data['token'];
-
-        final prefs = await SharedPreferences.getInstance();
-        
-        // --- SAUVEGARDE DES INFOS (Indispensable pour getStoredUser) ---
-        await prefs.setString('auth_token', token);
-        await prefs.setInt('user_id', userData['id']);
-        await prefs.setString('user_name', userData['name']);
-        await prefs.setString('user_email', userData['email']);
-        await prefs.setString('user_phone', userData['phone'] ?? "");
-        
-        // On récupère le nom du rôle depuis l'objet role imbriqué
-        if (userData['role'] != null) {
-          await prefs.setString('user_role', userData['role']['name']);
-        }
-        
-        // On stocke la photo si elle existe
-        if (userData['photo'] != null) {
-          await prefs.setString('user_photo', userData['photo']);
-        }
-
-        return UserModel.fromJson(userData);
+        print("✅ Inscription réussie dans la base de données.");
+        return json.decode(response.body)['name'];
       }
       return null;
     } catch (e) {
-      print("Erreur Login Service: $e");
+      print("💥 Erreur lors de l'inscription : $e");
       return null;
     }
   }
 
-  /// Inscription 
-  Future<bool> register({
-    required String name,
-    required String email,
-    required String phone,
-    required String password,
-    required String role,
-    File? imageFile,
-  }) async {
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/register'));
-      request.headers.addAll({'Accept': 'application/json'});
-
-      request.fields['name'] = name;
-      request.fields['email'] = email;
-      request.fields['phone'] = phone;
-      request.fields['password'] = password;
-      request.fields['role'] = role;
-
-      if (imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('photo', imageFile.path),
-        );
+  Future<UserModel?> getConnectedUser() async {
+    final String? id = _secureSession.read('user_session_id');
+    if (id != null && id.isNotEmpty) {
+      final response = await http.get(
+        Uri.parse("$baseUrl/users/$id.json?auth=$authSecret")
+      );
+      if (response.statusCode == 200 && response.body != 'null') {
+        return UserModel.fromJson(id, json.decode(response.body));
       }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      return response.statusCode == 201 || response.statusCode == 200;
-    } catch (e) {
-      print("Erreur Register Service: $e");
-      return false;
     }
+    return null;
   }
 
-  /// Déconnexion
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    try {
-      await http.post(
-        Uri.parse('$baseUrl/logout'),
-        headers: {
-          'Authorization': 'Bearer $token', 
-          'Accept': 'application/json'
-        },
-      );
-    } catch (e) {
-      print("Erreur déconnexion: $e");
-    } finally {
-      await prefs.clear(); // Efface TOUTES les données (ID, Nom, Token)
-    }
-  }
-
-  /// Mise à jour d'un utilisateur
-  Future<bool> updateUser(int id, String name, String phone) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? token = prefs.getString('auth_token'); 
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/users/$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'name': name, 
-          'phone': phone
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        await prefs.setString('user_name', name);
-        await prefs.setString('user_phone', phone);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print("Erreur Update: $e");
-      return false;
-    }
-  }
-
-  /// Récupère les informations stockées (Méthode Statique)
-  static Future<Map<String, dynamic>> getStoredUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'id': prefs.getInt('user_id'),
-      'name': prefs.getString('user_name') ?? "Utilisateur",
-      'email': prefs.getString('user_email') ?? "",
-      'phone': prefs.getString('user_phone') ?? "",
-      'role_name': prefs.getString('user_role') ?? "Partenaire SNGP",
-      'photo': prefs.getString('user_photo'),
-    };
+    _secureSession.write('', 'user_session_id');
+    _secureSession.write('', 'is_logged_in');
+    print("👋 Session terminée.");
   }
 }
