@@ -29,7 +29,7 @@
                 </p>
             </div>
 
-            @if($marches->isEmpty())
+            @if($markets->isEmpty())
                 <div class="text-center bg-white rounded-xl shadow-sm border border-gray-100 p-16 max-w-2xl mx-auto">
                     <div class="text-5xl mb-4">🗂️</div>
                     <h3 class="text-lg font-bold text-gray-900">Aucun appel d'offres disponible</h3>

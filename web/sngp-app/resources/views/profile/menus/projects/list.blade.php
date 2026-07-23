@@ -79,7 +79,7 @@
                                     <div>
                                         <span class="block text-xs font-medium text-gray-500 uppercase tracking-wider">Enveloppe Globale</span>
                                         <span class="text-lg font-bold text-cyan-700">
-                                            {{ number_format($project->budget_value, 0, ',', ' ') }} {{ $project->budget_devise }}
+                                            {{ number_format($project->budget_initial, 0, ',', ' ') }} {{ $project->budget_devise }}
                                         </span>
                                     </div>
                                     <div>

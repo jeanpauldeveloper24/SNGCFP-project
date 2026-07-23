@@ -6,40 +6,49 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-   public function up(): void
-{
-    Schema::create('markets', function (Blueprint $table) {
-        $table->id();
-        
-        // Clés étrangères d'appartenance
-        $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
-        $table->foreignId('project_module_id')->nullable()->constrained('project_modules')->onDelete('cascade');
-        
-        $table->string('objet'); 
-        $table->text('besoins_materiels')->nullable();
-        $table->double('montant', 15, 2); 
-        $table->string('devise')->default('FCFA');
-        
-        $table->date('date_lancement')->nullable(); 
-        $table->date('date_attribution')->nullable(); 
-        $table->date('candidature_start_date')->nullable();
-        $table->date('candidature_end_date')->nullable();
-        
-        $table->string('status')->default('En cours'); 
-        $table->string('etape')->default('EXPRESSION_BESOIN'); 
-        
-        // Critères administratifs
-        $table->boolean('exige_quitus')->default(false);
-        $table->boolean('exige_cnps')->default(false);
-        $table->boolean('exige_rccm')->default(false);
-        $table->boolean('exige_faillite')->default(false);
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('markets', function (Blueprint $table) {
+            $table->id();
+            $table->string('numero_reference')->nullable()->unique();
+            $table->string('objet');
+            
+            // Clés étrangères
+            $table->foreignId('project_id')->constrained()->onDelete('cascade');
+            $table->foreignId('project_module_id')->nullable()->constrained('project_modules')->onDelete('set null');
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null'); // Titulaire / Prestataire
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null'); // Agent créateur
+            
+            // Procédure & Étape
+            $table->string('methode_passation')->nullable(); // Ex: AON, AOI, AOR, COTA
+            $table->string('etape')->default('EXPRESSION_BESOIN');
+            $table->enum('status', ['Non attribué', 'Attribution en cour', 'Attribué'])->default('Non attribué');
 
-        $table->string('prestataire_retenu')->nullable(); 
-        $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('cascade');
-        $table->timestamps();
-    });
-}
+            // Cahier des charges & Financement
+            $table->decimal('besoin_financier', 15, 2)->default(0.00);
+            $table->string('devise', 10)->default('FCFA');
+            $table->json('besoins_materiels')->nullable();
+            
+            // Critères d'éligibilité / Pièces exigées
+            $table->boolean('exige_quitus')->default(false);
+            $table->boolean('exige_cnps')->default(false);
+            $table->boolean('exige_rccm')->default(false);
+            $table->boolean('exige_faillite')->default(false);
 
+            // Chronogramme de candidature uniquement
+            $table->date('candidature_start_date')->nullable();
+            $table->date('candidature_end_date')->nullable();
+            
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('markets');

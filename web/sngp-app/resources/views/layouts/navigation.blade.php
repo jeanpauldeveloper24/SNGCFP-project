@@ -9,7 +9,7 @@
     
     <div class="flex items-center px-6 h-20 bg-[#0d2a3d] shrink-0 border-b border-white/5">
         <a href="{{ url('/') }}" class="flex items-center gap-3">
-            <span class="font-montserrat font-bold text-xl tracking-tighter text-white">SNG<span class="text-[#27AE60]">CFP</span></span>
+            <span class="font-montserrat font-bold text-xl tracking-tighter text-white">SN<span class="text-[#27AE60]">GP</span></span>
         </a>
     </div>
 

@@ -6,32 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('project_modules', function (Blueprint $table) {
             $table->id();
             
-            // Liaison sacrée avec le projet parent
+            // Relation avec le projet parent
             $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
             
-            // Structure de tes modules
-            $table->integer('number'); // ex: Module 1, Module 2
+            // Optionnel : si le module est lié à un marché public
+            $table->foreignId('market_id')->nullable()->constrained('markets')->nullOnDelete();
+
+            $table->integer('number');
             $table->text('description')->nullable();
-            $table->double('budget_value', 15, 2);
-            $table->string('budget_devise'); // 'FCFA' ou 'USD'
-            $table->string('duree')->nullable(); // ex: '6 mois', '1 an'
             
-            $table->string('status')->default('Non débuté'); // Pour le suivi d'avancement
+            // Unification sur besoin_financier et devise
+            $table->double('besoin_financier', 15, 2);
+            $table->string('devise')->nullable(); // Ex: 'XOF', 'USD'
+            
+            $table->string('duree')->nullable();
+            $table->string('status')->default('Non débuté');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('project_modules');

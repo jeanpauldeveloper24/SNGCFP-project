@@ -149,8 +149,8 @@
                                     </div>
 
                                     <div class="sm:col-span-4">
-                                        <label class="block text-xs font-semibold text-gray-600 uppercase">Budget Alloué (Dans la devise du projet)</label>
-                                        <input type="number" name="modules[{{ $index }}][budget_value]" value="{{ old('modules.'.$index.'.budget_value', $module->budget_value) }}" min="0" step="0.01" placeholder="Budget du module" 
+                                        <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
+                                        <input type="number" name="modules[{{ $index }}][besoin_financier]" value="{{ old('modules.'.$index.'.besoin_financier', $module->besoin_financier) }}" min="0" step="0.01" placeholder="Besoin financier du module" 
                                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
                                     </div>
 
@@ -182,8 +182,8 @@
                                 </div>
 
                                 <div class="sm:col-span-4">
-                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Budget Alloué (Dans la devise du projet)</label>
-                                    <input type="number" name="modules[0][budget_value]" min="0" step="0.01" placeholder="Budget du module" 
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
+                                    <input type="number" name="modules[0][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier du module" 
                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
                                 </div>
 
@@ -258,8 +258,8 @@
                     </div>
 
                     <div class="sm:col-span-4">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Budget Alloué (Dans la devise du projet)</label>
-                        <input type="number" name="modules[${nextIndex}][budget_value]" min="0" step="0.01" placeholder="Budget" 
+                        <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
+                        <input type="number" name="modules[${nextIndex}][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier" 
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
                     </div>
 

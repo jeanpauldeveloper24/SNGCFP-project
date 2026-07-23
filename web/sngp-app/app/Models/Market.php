@@ -2,82 +2,84 @@
 
 namespace App\Models;
 
-use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Market extends Model
 {
-    use Loggable;
-
-    protected $casts = [
-        'besoins_materiels' => 'array',
-        'exige_quitus' => 'boolean',
-        'exige_cnps' => 'boolean',
-        'exige_rccm' => 'boolean',
-        'exige_faillite' => 'boolean',
-    ];
-    
     protected $fillable = [
-        'project_id',          // Ajouté pour correspondre à la migration
-        'project_module_id',   // Conservé pour la liaison aux composantes
+        'project_id',
+        'project_module_id',
+        'user_id',
+        'created_by',
         'objet',
-        'besoins_materiels',   // Ajouté
-        'montant',
+        'methode_passation',
+        'etape',
+        'status',
+        'besoin_financier',
+        'besoins_materiels',
         'devise',
-        'date_lancement',
-        'date_attribution',
         'candidature_start_date',
         'candidature_end_date',
-        'status',
-        'etape',               // Corrigé (au lieu de etape_actuelle)
-        'exige_quitus',        // Ajouté
-        'exige_cnps',          // Ajouté
-        'exige_rccm',          // Ajouté
-        'exige_faillite',      // Ajouté
-        'prestataire_retenu',
-        'created_by'
+        'exige_quitus',
+        'exige_cnps',
+        'exige_rccm',
+        'exige_faillite',
     ];
 
     /**
-     * Liaison directe avec le Projet
+     * Transtypage des attributs.
      */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class, 'project_id');
-    }
+    protected $casts = [
+        'besoins_materiels'      => 'array',
+        'besoin_financier'       => 'decimal:2',
+        'candidature_start_date' => 'date',
+        'candidature_end_date'   => 'date',
+        'exige_quitus'           => 'boolean',
+        'exige_cnps'             => 'boolean',
+        'exige_rccm'             => 'boolean',
+        'exige_faillite'         => 'boolean',
+    ];
 
     /**
-     * Liaison optionnelle avec la Composante (Module)
+     * Libellé propre de l'étape.
      */
+    public function getEtapeActuelleLibelleAttribute(): string
+    {
+        $etapes = [
+            'EXPRESSION_BESOIN'     => '01 - Expression du besoin',
+            'REDACTION_DAO'         => '02 - Rédaction du DAO',
+            'VALIDATION_DGMP'       => '03 - Validation DGMP',
+            'PUBLICATION_AVIS'      => "04 - Publication de l'Avis",
+            'RECEPTION_OFFRES'      => '05 - Réception des offres',
+            'OUVERTURE_PLIS'        => '06 - Ouverture des plis',
+            'EVALUATION_TECHNIQUE'  => '07 - Évaluation Technique',
+            'ATTRIBUTION_PROVISOIRE'=> '08 - Attribution Provisoire',
+            'SIGNATURE_CONTRAT'     => '09 - Signature du Contrat',
+            'ORDRE_SERVICE'         => '10 - Ordre de Service (OS)',
+            'PREMIER_VERSEMENT'     => '11 - Premier Versement',
+            'EXECUTION_TRAVAUX'     => '12 - Exécution des travaux',
+            'DERNIER_VERSEMENT'     => '13 - Dernier Versement',
+            'RECEPTION_DEFINITIVE'  => '14 - Réception définitive',
+        ];
+
+        return $etapes[$this->etape] ?? ($this->etape ?? 'Non définie');
+    }
+
+    // Relations
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
     public function module(): BelongsTo
     {
         return $this->belongsTo(ProjectModule::class, 'project_module_id');
     }
 
-    public function creator(): BelongsTo
+    public function titulaire(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function candidatures(): HasMany
-    {
-        return $this->hasMany(Candidature::class);
-    }
-
-    public function paiements(): HasMany
-    {
-        return $this->hasMany(Paiement::class);
-    }
-
-    public function avenants(): HasMany
-    {
-        return $this->hasMany(Avenant::class);
-    }
-
-    public function travaux(): HasMany
-    {
-        return $this->hasMany(Travail::class);
-    }
 }
