@@ -118,11 +118,37 @@
                                                                         @csrf
                                                                         
                                                                         <div>
-                                                                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mémoire Technique du Soumissionnaire</h4>
-                                                                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 text-gray-800 text-xs font-normal leading-relaxed max-h-60 overflow-y-auto text-left whitespace-pre-line">
-                                                                                {{ $candidature->proposition_technique }}
-                                                                            </div>
-                                                                        </div>
+    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Mémoire Technique du Soumissionnaire</h4>
+    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 text-gray-800 text-xs font-normal leading-relaxed max-h-60 overflow-y-auto">
+        @php
+            $items = is_string($candidature->proposition_technique) 
+                ? json_decode($candidature->proposition_technique, true) 
+                : $candidature->proposition_technique;
+        @endphp
+
+        @if(is_array($items) && count($items) > 0)
+            <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden bg-white">
+                <thead class="bg-gray-100 font-semibold text-gray-600 text-[11px] uppercase">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Désignation</th>
+                        <th class="px-3 py-2 text-right">Quantité</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @foreach($items as $item)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-2 text-gray-900 font-medium">{{ $item['designation'] ?? '-' }}</td>
+                            <td class="px-3 py-2 text-right font-bold text-indigo-600 font-mono">{{ $item['quantite'] ?? '-' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <!-- Fallback au cas où ce n'est pas un JSON structuré -->
+            <p class="whitespace-pre-line text-gray-700">{{ $candidature->proposition_technique }}</p>
+        @endif
+    </div>
+</div>
 
                                                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                                                                             <div class="text-left">

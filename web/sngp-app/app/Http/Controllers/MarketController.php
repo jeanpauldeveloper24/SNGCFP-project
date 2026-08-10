@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Candidature;
 
 class MarketController extends Controller
 {
@@ -73,9 +74,6 @@ class MarketController extends Controller
     /**
      * Enregistrement d'un nouveau marché en BDD
      */
-    /**
-     * Enregistrement d'un nouveau marché en BDD
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -92,10 +90,6 @@ class MarketController extends Controller
             'user_id'                         => 'nullable|exists:users,id',
             'status'                          => 'nullable|string',
             'etape'                           => 'nullable|string',
-            'exige_quitus'                    => 'nullable|boolean',
-            'exige_cnps'                      => 'nullable|boolean',
-            'exige_rccm'                      => 'nullable|boolean',
-            'exige_faillite'                  => 'nullable|boolean',
         ]);
 
         // Charger le projet parent pour récupérer sa devise
@@ -114,14 +108,149 @@ class MarketController extends Controller
             'user_id'                => $validated['user_id'] ?? null,
             'status'                 => $validated['status'] ?? 'Non attribué',
             'etape'                  => $validated['etape'] ?? 'EXPRESSION_BESOIN',
-            'exige_quitus'           => $request->boolean('exige_quitus'),
-            'exige_cnps'             => $request->boolean('exige_cnps'),
-            'exige_rccm'             => $request->boolean('exige_rccm'),
-            'exige_faillite'         => $request->boolean('exige_faillite'),
             'created_by'             => Auth::id(),
         ]);
 
         return redirect()->route('passation.index')
             ->with('success', 'Le marché et son cahier des charges ont été enregistrés avec succès !');
     }
+
+    /**
+     * Affiche la liste publique des marchés / opportunités.
+     */
+    public function indexPublique()
+    {
+        // Récupère les marchés (avec possibilité de filtrer par statut publié)
+        $markets = Market::with(['project', 'module'])->latest()->get();
+
+        return view('pages.marche.liste', compact('markets'));
+    }
+
+    /**
+ * Affiche les détails d'un marché spécifique en accès public.
+ */
+public function showPublique($id)
+{
+    // Charge le marché avec ses vraies relations (project et module)
+    $marche = Market::with(['project', 'module'])->findOrFail($id);
+
+    // Retourne la vue 'candidature-form.blade.php'
+    return view('pages.candidature-form', compact('marche'));
+}
+
+// postuler pour un marché spécifique
+public function postuler(Request $request, $id)
+{
+    // 1. Récupération directe du marché
+    $marche = Market::findOrFail($id);
+
+    // 2. Validation des champs
+    $validated = $request->validate([
+        'nom_candidat'              => 'required|string|max:255',
+        'numero_registre_commerce'  => 'required|string|max:100',
+        
+        // Documents administratifs
+        'file_rccm'                 => 'required|file|mimes:pdf|max:10240',
+        'file_acte_constitution'    => 'nullable|file|mimes:pdf|max:10240',
+        'file_dfe'                  => 'required|file|mimes:pdf|max:10240',
+        'file_arf'                  => 'required|file|mimes:pdf|max:10240',
+        'file_cnps'                 => 'required|file|mimes:pdf|max:10240',
+        'file_attestation_bancaire' => 'required|file|mimes:pdf|max:10240',
+        
+        // Offres financière & technique
+        'proposition_financiere'     => 'required|numeric|min:0',
+        'propositions_techniques'    => 'nullable|array', // Avec "s" pour matcher la Blade !
+        'propositions_techniques.*.designation' => 'nullable|string',
+        'propositions_techniques.*.quantite'    => 'nullable|numeric|min:0',
+    ]);
+
+    // 3. Stockage des Fichiers PDF dans le storage public
+    $pathRccm     = $request->file('file_rccm')->store('candidatures/rccm', 'public');
+    $pathDfe      = $request->file('file_dfe')->store('candidatures/dfe', 'public');
+    $pathArf      = $request->file('file_arf')->store('candidatures/arf', 'public');
+    $pathCnps     = $request->file('file_cnps')->store('candidatures/cnps', 'public');
+    $pathBancaire = $request->file('file_attestation_bancaire')->store('candidatures/attestations_bancaires', 'public');
+
+    $pathActeConstitution = $request->hasFile('file_acte_constitution') 
+        ? $request->file('file_acte_constitution')->store('candidatures/actes_constitution', 'public') 
+        : null;
+
+    // 4. --- ALGORITHME D'ÉVALUATION AUTOMATIQUE ---
+    $estAccepte = true;
+    $motifsRefus = [];
+
+    // A. Évaluation Financière
+    $budgetMax = $marche->besoin_financier ?? $marche->montant_max ?? null;
+
+    if ($budgetMax !== null && $validated['proposition_financiere'] > $budgetMax) {
+        $estAccepte = false;
+        $motifsRefus[] = "La proposition financière (" . number_format($validated['proposition_financiere'], 0, ',', ' ') . " FCFA) dépasse le budget maximal autorisé de " . number_format($budgetMax, 0, ',', ' ') . " FCFA.";
+    }
+
+    // B. Évaluation Technique
+    $besoinsRequis = is_string($marche->besoins_materiels) 
+        ? json_decode($marche->besoins_materiels, true) 
+        : $marche->besoins_materiels;
+
+    $propositionsSaisies = $validated['propositions_techniques'] ?? [];
+
+    if (is_array($besoinsRequis)) {
+        foreach ($besoinsRequis as $index => $item) {
+            $designation = $item['designation'] ?? $item['nom'] ?? "Article #".($index + 1);
+            $qteRequise  = (int) ($item['quantite'] ?? 1);
+
+            // On cherche la quantité que le candidat a saisie pour cette désignation précise
+            $qteProposee = 0;
+            foreach ($propositionsSaisies as $prop) {
+                if (isset($prop['designation']) && $prop['designation'] === $designation) {
+                    $qteProposee = (int) ($prop['quantite'] ?? 0);
+                    break;
+                }
+            }
+
+            // Vérification si la quantité proposée est suffisante
+            if ($qteProposee < $qteRequise) {
+                $estAccepte = false;
+                $motifsRefus[] = "Quantité insuffisante pour '{$designation}' : {$qteProposee} proposée(s) vs {$qteRequise} requise(s).";
+            }
+        }
+    }
+
+    // Détermination du statut final
+    $status = $estAccepte ? 'Accepté' : 'Rejeté';
+    $motifStatut = $estAccepte 
+        ? 'Candidature conforme aux exigences financières et techniques du cahier des charges.' 
+        : implode(' | ', $motifsRefus);
+
+    // 5. Enregistrement en Base de Données
+    $candidature = Candidature::create([
+        'marche_id'                 => $marche->id,
+        'nom_candidat'              => $validated['nom_candidat'],
+        'numero_registre_commerce'  => $validated['numero_registre_commerce'],
+        
+        // Fichiers PDF
+        'file_rccm'                 => $pathRccm,
+        'file_acte_constitution'    => $pathActeConstitution,
+        'file_dfe'                  => $pathDfe,
+        'file_arf'                  => $pathArf,
+        'file_cnps'                 => $pathCnps,
+        'file_attestation_bancaire' => $pathBancaire,
+
+        // Propositions
+        'proposition_financiere'    => $validated['proposition_financiere'],
+        'proposition_technique'     => json_encode($propositionsSaisies), // Sauvegarde du tableau [designation, quantite]
+        
+        // Résultats de l'évaluation
+        'status'                    => $status,
+        'motif_statut'              => $motifStatut,
+    ]);
+
+    // 6. Message de retour
+    if ($estAccepte) {
+        return back()->with('success', 'Votre candidature et vos documents ont été validés et retenus avec succès !');
+    } else {
+        return back()->with('warning', 'Votre candidature a été enregistrée mais non retenue : ' . $motifStatut);
+    }
+}
+
 }

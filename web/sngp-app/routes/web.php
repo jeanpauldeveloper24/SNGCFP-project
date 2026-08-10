@@ -36,9 +36,10 @@ Route::get('/contexte', function () {
 
 // VITRINE PUBLIQUE DES MARCHÉS : Consultations et Dépôts de candidatures
 Route::get('/opportunites', [MarketController::class, 'indexPublique'])->name('pages.marches.liste');
-Route::get('/opportunites/marche/{id}', [MarketController::class, 'showPublique'])->name('pages.marches.show');
-Route::post('/opportunites/marche/{id}/soumettre', [MarketController::class, 'soumettreCandidature'])->name('pages.marches.soumettre');
-
+// Route pour afficher le formulaire de candidature
+Route::get('/opportunites/marche/{id}', [MarketController::class, 'showPublique'])->name('pages.candidature-form');
+// Route pour traiter l'envoi du formulaire
+Route::post('/opportunites/marche/{id}/postuler', [MarketController::class, 'postuler'])->name('pages.marche.postuler');
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +104,18 @@ Route::middleware('auth')->group(function () {
         $candidatures = Candidature::latest()->get();
         return view('profile.menus.candidatures.liste', compact('candidatures'));
     })->name('menus.candidatures.liste');
+
+    Route::post('/candidatures/{id}/arbitrer', function (Request $request, $id) {
+    $candidature = Candidature::findOrFail($id);
+
+    // Exemple de logique d'arbitrage
+    $candidature->update([
+        'status' => $request->input('status'), // 'Accepté' ou 'Rejeté'
+        'motif_statut' => $request->input('motif_statut'),
+    ]);
+
+    return back()->with('success', 'La candidature a été arbitrée avec succès.');
+})->name('menus.candidatures.arbitrer');
 
     // 6. SYSTÈME & LOGS D'AUDIT
     Route::get('/audit', function () {

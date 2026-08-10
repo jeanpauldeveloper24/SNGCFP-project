@@ -12,20 +12,21 @@ return new class extends Migration
             $table->id();
             
             // Relation avec le projet parent
-            $table->foreignId('project_id')->constrained('projects')->onDelete('cascade');
-            
-            // Optionnel : si le module est lié à un marché public
-            $table->foreignId('market_id')->nullable()->constrained('markets')->nullOnDelete();
+            $table->foreignId('project_id')
+                  ->constrained('projects')
+                  ->onDelete('cascade');
 
-            $table->integer('number');
-            $table->text('description')->nullable();
+            // Informations de repérage et description
+            $table->integer('number'); // Numéro ou ordre du module (ex: 1, 2, 3)
+            $table->string('description');
             
-            // Unification sur besoin_financier et devise
-            $table->double('besoin_financier', 15, 2);
-            $table->string('devise')->nullable(); // Ex: 'XOF', 'USD'
+            // Gestion financière du module
+            $table->decimal('besoin_financier', 15, 2)->default(0.00);
+            $table->string('devise', 10)->default('XOF');
             
-            $table->string('duree')->nullable();
-            $table->string('status')->default('Non débuté');
+            // Planning / Durée
+            $table->string('duree')->nullable(); // Ex: "6 mois", "Q1-Q3 2026"
+            
             $table->timestamps();
         });
     }

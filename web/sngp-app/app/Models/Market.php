@@ -1,12 +1,15 @@
 <?php
 
 namespace App\Models;
-
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Market extends Model
 {
+
+use Loggable;
+
     protected $fillable = [
         'project_id',
         'project_module_id',
@@ -21,10 +24,6 @@ class Market extends Model
         'devise',
         'candidature_start_date',
         'candidature_end_date',
-        'exige_quitus',
-        'exige_cnps',
-        'exige_rccm',
-        'exige_faillite',
     ];
 
     /**
@@ -35,10 +34,6 @@ class Market extends Model
         'besoin_financier'       => 'decimal:2',
         'candidature_start_date' => 'date',
         'candidature_end_date'   => 'date',
-        'exige_quitus'           => 'boolean',
-        'exige_cnps'             => 'boolean',
-        'exige_rccm'             => 'boolean',
-        'exige_faillite'         => 'boolean',
     ];
 
     /**

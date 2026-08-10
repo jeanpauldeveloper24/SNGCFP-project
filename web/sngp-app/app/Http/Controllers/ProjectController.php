@@ -299,12 +299,12 @@ class ProjectController extends Controller
         });
 
         // 2. Récupération des projets et calcul des enveloppes réelles globales
-        $projets = Project::all();
-        $enveloppeGlobale = $projets->sum('budget_value');
-        
-        // Ventilation réelle des budgets initiaux par devise/financeur
-        $enveloppeBAD  = $projets->where('devise', '!=', 'XOF')->sum('budget_value');
-        $enveloppeEtat = $projets->where('devise', 'XOF')->sum('budget_value');
+$projets = Project::all();
+$enveloppeGlobale = $projets->sum('budget_value');
+
+// Correction : Utilisation de budget_devise au lieu de devise
+$enveloppeBAD  = $projets->where('budget_devise', '!=', 'XOF')->sum('budget_value');
+$enveloppeEtat = $projets->where('budget_devise', 'XOF')->sum('budget_value');
 
         // 3. Récupération de tous les flux de décaissements réels validés
         $decaissements = Paiement::with(['project', 'market'])->where('status', 'Effectué')->get();
@@ -373,10 +373,12 @@ class ProjectController extends Controller
     }
 
     public function dashboard()
-    {
-        $projects = Project::with('modules')->get(); 
-        return view('profile.menus.projects.list', compact('projects'));
-    }
+{
+    // On ajoute 'modules.markets' dans le with()
+    $projects = Project::with(['modules.markets'])->get();
+
+    return view('profile.menus.projects.list', compact('projects'));
+}
     
     /**
      * Formulaire d'ajout -> form.blade.php
@@ -422,67 +424,67 @@ class ProjectController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        // 1. Validation des données du formulaire
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:projects,code,' . $id,
-            'nom' => 'required|string|max:255',
-            'budget_initial' => 'required|numeric|min:0',
-            'budget_devise' => 'required|string|max:3',
-            'taux_change' => 'required|numeric|min:0',
-            'pourcentage_bailleur' => 'required|numeric|min:0|max:100',
-            'pourcentage_etat' => 'required|numeric|min:0|max:100',
-            'description' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            
-            // Validation du tableau des modules
-            'modules' => 'required|array|min:1',
-            'modules.*.number' => 'required|integer',
-            'modules.*.description' => 'required|string|max:255',
-            'modules.*.budget_value' => 'required|numeric|min:0',
-            'modules.*.duree' => 'required|string|max:255',
-        ]);
-
-        // 2. Récupération et mise à jour du projet
-        $project = Project::findOrFail($id);
+{
+    $validated = $request->validate([
+        'code'                 => 'required|string|max:255|unique:projects,code,' . $id,
+        'nom'                  => 'required|string|max:255',
+        'budget_initial'       => 'required|numeric|min:0',
+        'budget_devise'        => 'required|string|max:10',
+        'ville' => 'required|in:' . implode(',', array_keys(config('villes'))),
+        'taux_change'          => 'nullable|numeric|min:0',
+        'pourcentage_bailleur' => 'nullable|numeric|min:0|max:100',
+        'pourcentage_etat'     => 'nullable|numeric|min:0|max:100',
+        'financement_bailleur' => 'nullable|numeric|min:0',
+        'financement_etat'     => 'nullable|numeric|min:0',
+        'description'          => 'nullable|string',
+        'start_date'           => 'nullable|date',
+        'end_date'             => 'nullable|date|after_or_equal:start_date',
         
-        // Calcul de la valeur convertie (si tu as un champ budget_value calculé en base)
-        $budgetValueCalculated = $request->budget_initial * $request->taux_change;
+        'modules'              => 'nullable|array',
+        'modules.*.number'     => 'required',
+        'modules.*.description'=> 'required|string',
+        'modules.*.besoin_financier' => 'required|numeric',
+        'modules.*.duree'      => 'required',
+    ]);
 
-        $project->update([
-            'code' => $request->code,
-            'nom' => $request->nom,
-            'budget_initial' => $request->budget_initial,
-            'budget_devise' => $request->budget_devise,
-            'taux_change' => $request->taux_change,
-            'budget_value' => $budgetValueCalculated,
-            'pourcentage_bailleur' => $request->pourcentage_bailleur,
-            'pourcentage_etat' => $request->pourcentage_etat,
-            'description' => $request->description,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-        ]);
+    $project = Project::findOrFail($id);
+    
+    $taux = $request->input('taux_change', 1.0);
+    $budgetValueCalculated = $request->budget_initial * $taux;
 
-        // 3. Synchronisation des modules (Composantes)
-        // On purge les anciens modules du projet
+    $project->update([
+        'code'                 => $validated['code'],
+        'nom'                  => $validated['nom'],
+        'description'          => $request->input('description'),
+        'budget_initial'       => $validated['budget_initial'],
+        'budget_devise'        => $validated['budget_devise'],
+        'taux_change'          => $taux,
+        'budget_value'         => $budgetValueCalculated,
+        'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
+        'pourcentage_etat'     => $request->input('pourcentage_etat'),
+        'financement_bailleur' => $request->input('financement_bailleur'),
+        'financement_etat'     => $request->input('financement_etat'),
+        'start_date'           => $request->input('start_date'),
+        'end_date'             => $request->input('end_date'),
+    ]);
+
+    // Re-synchronisation des modules
+    if ($request->has('modules')) {
         $project->modules()->delete();
-
-        // On réinsère les modules avec les nouvelles données et la bonne devise
         foreach ($request->modules as $moduleData) {
             $project->modules()->create([
-                'number'        => $moduleData['number'],
-                'description'   => $moduleData['description'],
-                'budget_value'  => $moduleData['budget_value'],
-                'duree'         => $moduleData['duree'],
-                'budget_devise' => $request->budget_devise,
+                'number'           => $moduleData['number'],
+                'description'      => $moduleData['description'],
+                'besoin_financier' => $moduleData['besoin_financier'],
+                'devise'           => $validated['budget_devise'],
+                'duree'            => $moduleData['duree'],
             ]);
         }
-
-        // 4. Redirection avec un message de succès
-        return redirect()->route('profile.menus.projects.list')
-                         ->with('success', 'Le projet a été mis à jour avec succès (passage en ' . $request->budget_devise . ').');
     }
+
+    return redirect()->route('profile.menus.projects.list')
+                     ->with('success', 'Le projet a été mis à jour avec succès.');
+}
 
     /**
      * Enregistre un projet et ses modules associés.

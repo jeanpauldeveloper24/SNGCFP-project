@@ -44,7 +44,7 @@
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    @foreach($marches as $marche)
+                    @foreach($markets as $marche)
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden relative">
                             
                             @php
@@ -73,13 +73,6 @@
                                     {{ $marche->objet }}
                                 </h3>
 
-                                <div class="mt-4 bg-cyan-50/40 border border-cyan-100/30 rounded-xl p-3 flex items-center justify-between">
-                                    <span class="text-xs font-medium text-gray-500">Enveloppe estimée :</span>
-                                    <span class="font-mono font-extrabold text-cyan-800 text-sm">
-                                        {{ number_format($marche->montant, 0, ',', ' ') }} CFA
-                                    </span>
-                                </div>
-
                                 <div class="mt-6 space-y-2 border-t border-gray-100 pt-4 text-xs">
                                     <div class="flex justify-between text-gray-600">
                                         <span class="text-gray-400">Ouverture des dépôts :</span>
@@ -96,9 +89,9 @@
                                 <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">
                                     Statut: <span class="text-amber-600 font-bold">{{ $marche->status }}</span>
                                 </span>
-                                <a href="{{ route('pages.marches.show', $marche->id) }}" class="inline-flex items-center rounded-lg bg-cyan-700 hover:bg-cyan-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition uppercase tracking-wider">
-                                    Soumissionner →
-                                </a>
+                                <a href="{{ route('pages.candidature-form', $marche->id) }}" class="inline-flex items-center rounded-lg bg-cyan-700 hover:bg-cyan-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition uppercase tracking-wider">
+    Soumissionner →
+</a>
                             </div>
 
                         </div>

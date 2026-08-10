@@ -13,21 +13,29 @@ return new class extends Migration
     {
         Schema::create('candidatures', function (Blueprint $table) {
             $table->id();
-            // Liaison directe avec le marché concerné
-            $table->foreignId('market_id')->constrained('markets')->onDelete('cascade');
             
+            // Liaison directe avec le marché concerné (Clé étrangère)
+            $table->foreignId('marche_id')->constrained('markets')->onDelete('cascade');
+            
+            // Identité du candidat
             $table->string('nom_candidat');
             $table->string('numero_registre_commerce');
             
-            // Stockage de la liste dynamique des matériels au format JSON (comme besoin_matériel)
-            $table->text('proposition_technique'); 
+            // --- Documents Administratifs Réglementaires (Chemins des fichiers PDF) ---
+            $table->string('file_rccm')->nullable()->comment('Registre de Commerce et du Crédit Mobilier');
+            $table->string('file_acte_constitution')->nullable()->comment('Acte légal de constitution (Statuts)');
+            $table->string('file_dfe')->nullable()->comment('Déclaration Fiscale d\'Existence');
+            $table->string('file_arf')->nullable()->comment('Attestation de Régularité Fiscale (Quitus)');
+            $table->string('file_cnps')->nullable()->comment('Attestation CNPS à jour');
+            $table->string('file_attestation_bancaire')->nullable()->comment('Attestation d\'ouverture de compte bancaire');
             
-            // Le montant proposé par le candidat
-            $table->decimal('proposition_financiere', 15, 2); 
+            // --- Propositions Technique et Financière ---
+            $table->text('proposition_technique'); // Stockage JSON des réponses aux besoins
+            $table->decimal('proposition_financiere', 15, 2); // Montant total proposé
             
-            // Statut de la candidature
-            $table->enum('status', ['En attente', 'Accepté', 'Rejeté Automatiquement'])->default('En attente');
-            $table->text('motif_statut')->nullable(); // Ex: "Critères techniques non atteints"
+            // --- Statut et Évaluation ---
+            $table->enum('status', ['En attente', 'Accepté', 'Rejeté'])->default('En attente');
+            $table->text('motif_statut')->nullable(); // Raison ou détails de la décision d'évaluation
             
             $table->timestamps();
         });

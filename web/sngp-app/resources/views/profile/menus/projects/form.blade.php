@@ -54,26 +54,43 @@
 
                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                     
-                    <div class="sm:col-span-2">
+                    
+{{-- SELECTION VILLE POUR NOUVEAU CODE --}}
+<div class="sm:col-span-2">
+    <label for="ville" class="block text-sm font-semibold text-gray-700">Ville du Projet</label>
+    <select id="ville" name="ville" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
+        <option value="">-- Choisir la ville --</option>
+        
+        @foreach(config('villes') as $code => $nom)
+            <option value="{{ $code }}" {{ old('ville', $project->ville ?? '') == $code ? 'selected' : '' }}>
+                {{ $nom }} ({{ $code }})
+            </option>
+        @endforeach
+
+    </select>
+</div>
+
+                    <div class="sm:col-span-4">
                         <label for="code" class="block text-sm font-semibold text-gray-700">Code Unique du Projet</label>
-                        <input type="text" name="code" id="code" value="{{ old('code', $project->code ?? '') }}" placeholder="ex: PROJ-BAD-001" 
+                        <input type="text" name="code" id="code" value="{{ old('code', $project->code ?? '') }}" placeholder="ex: PRJ-2026-ABJ-0001" 
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
                     </div>
 
-                    <div class="sm:col-span-4">
+                    <div class="sm:col-span-6">
                         <label for="nom" class="block text-sm font-semibold text-gray-700">Nom / Intitulé Officiel</label>
                         <input type="text" name="nom" id="nom" value="{{ old('nom', $project->nom ?? '') }}" placeholder="ex: Projet d'Appui au..." 
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
                     </div>
 
+                    {{-- BLOC CONVERTISSEUR DE DEVISES DYNAMIQUE --}}
                     <div class="sm:col-span-3">
                         <label for="budget_initial" class="block text-sm font-semibold text-gray-700">Montant de l'Enveloppe Globale</label>
                         <input type="number" name="budget_initial" id="budget_initial" value="{{ old('budget_initial', $project->budget_initial ?? '') }}" min="0" step="0.01" placeholder="ex: 24500000" 
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
                     </div>
 
-                    <div class="sm:col-span-1">
-                        <label for="budget_devise" class="block text-sm font-semibold text-gray-700">Devise</label>
+                    <div class="sm:col-span-3">
+                        <label for="budget_devise" class="block text-sm font-semibold text-gray-700">Devise Principale</label>
                         <select name="budget_devise" id="budget_devise" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
                             <option value="XOF" {{ old('budget_devise', $project->budget_devise ?? '') == 'XOF' ? 'selected' : '' }}>XOF (FCFA)</option>
                             <option value="USD" {{ old('budget_devise', $project->budget_devise ?? '') == 'USD' ? 'selected' : '' }}>USD ($)</option>
@@ -81,10 +98,28 @@
                         </select>
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <label for="taux_change" class="block text-sm font-semibold text-gray-700">Taux de Change (si != XOF)</label>
-                        <input type="number" name="taux_change" id="taux_change" value="{{ old('taux_change', $project->taux_change ?? '1.00') }}" min="0" step="0.01" placeholder="ex: 612.50" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
+                    <div class="sm:col-span-3">
+                        <label for="budget_equivalent" class="block text-sm font-semibold text-gray-700">Équivalent estimé</label>
+                        <input type="number" name="budget_equivalent" id="budget_equivalent" value="{{ old('budget_equivalent', $project->budget_equivalent ?? '') }}" min="0" step="0.01" placeholder="Montant converti" 
+                            class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
+                    </div>
+
+                    <div class="sm:col-span-3">
+                        <label for="devise_cible" class="block text-sm font-semibold text-gray-700">Devise de Conversion</label>
+                        <select name="devise_cible" id="devise_cible" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
+                            <option value="USD" {{ old('devise_cible', $project->devise_cible ?? '') == 'USD' ? 'selected' : '' }}>USD ($)</option>
+                            <option value="XOF" {{ old('devise_cible', $project->devise_cible ?? '') == 'XOF' ? 'selected' : '' }}>XOF (FCFA)</option>
+                            <option value="EUR" {{ old('devise_cible', $project->devise_cible ?? '') == 'EUR' ? 'selected' : '' }}>EUR (€)</option>
+                        </select>
+                    </div>
+
+                    {{-- INDICATEUR DU TAUX DE CHANGE API --}}
+                    <div class="sm:col-span-6 bg-cyan-50/50 p-3 rounded-lg border border-cyan-100 flex items-center justify-between text-xs text-cyan-800">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold">💱 Taux Live :</span>
+                            <span id="rate-display">Chargement du taux de change...</span>
+                        </div>
+                        <div id="rate-loader" class="hidden animate-spin rounded-full h-4 w-4 border-2 border-cyan-700 border-t-transparent"></div>
                     </div>
 
                     <div class="sm:col-span-3">
@@ -213,92 +248,175 @@
 </div>
 
 <script>
-    // Aligner automatiquement le taux de change si on choisit XOF ou USD au démarrage
-    function checkDevise(selectElement) {
-        const tauxInput = document.getElementById('taux_change');
-        if (selectElement.value === 'XOF') {
-            tauxInput.value = '1.00';
-            tauxInput.setAttribute('readonly', 'true');
-            tauxInput.classList.add('bg-gray-100');
-        } else {
-            tauxInput.removeAttribute('readonly');
-            tauxInput.classList.remove('bg-gray-100');
-            if(selectElement.value === 'USD' && (tauxInput.value == '1.00' || tauxInput.value == '')) {
-                tauxInput.value = '612.50';
+document.addEventListener('DOMContentLoaded', function () {
+    // --- 1. CODE PROJET AUTO (PRJ-YYYY-VILLE-XXXX) ---
+    const selectVille = document.getElementById('ville');
+    const inputCode = document.getElementById('code');
+    const currentYear = new Date().getFullYear();
+
+    if (selectVille && inputCode) {
+        selectVille.addEventListener('change', function () {
+            const villeCode = this.value;
+            // Pré-remplissage dynamique de la structure
+            inputCode.value = villeCode ? `PRJ-${currentYear}-${villeCode}-0001` : '';
+        });
+    }
+
+    // --- 2. CONVERTISSEUR STYLE GOOGLE CURRENCY CONVERTER ---
+    const apiKey = "{{ config('services.exchangerate.api_key', 'aa78a1e90740b0912e729963') }}"; // Clé ExchangeRate-API via Laravel Config
+    
+    const inputPrincipal = document.getElementById('budget_initial');
+    const selectDevisePrincipal = document.getElementById('budget_devise');
+    
+    const inputEquivalent = document.getElementById('budget_equivalent');
+    const selectDeviseCible = document.getElementById('devise_cible');
+    
+    const rateDisplay = document.getElementById('rate-display');
+    const rateLoader = document.getElementById('rate-loader');
+
+    let currentRates = {};
+
+    // Récupération des taux via l'endpoint Standard /latest/
+    async function updateRates() {
+        const baseCurrency = selectDevisePrincipal.value;
+        if (rateLoader) rateLoader.classList.remove('hidden');
+
+        try {
+            const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${baseCurrency}`);
+            const data = await response.json();
+
+            // Gestion de réponse selon la documentation officielle
+            if (data.result === 'success') {
+                currentRates = data.conversion_rates;
+                
+                // Si la devise cible est identique à la devise principale, on bascule
+                if (selectDeviseCible.value === baseCurrency) {
+                    selectDeviseCible.value = (baseCurrency === 'XOF') ? 'USD' : 'XOF';
+                }
+
+                calculateFromPrincipal();
+            } else {
+                console.error('Erreur ExchangeRate-API:', data['error-type']);
+                if (rateDisplay) rateDisplay.textContent = `Erreur API: ${data['error-type']}`;
             }
+        } catch (error) {
+            console.error('Erreur réseau / fetch:', error);
+            if (rateDisplay) rateDisplay.textContent = 'Impossible de contacter le service de taux.';
+        } finally {
+            if (rateLoader) rateLoader.classList.add('hidden');
         }
     }
 
-    // Lancement au chargement de la page pour initialiser l'état du champ taux de change
-    checkDevise(document.getElementById('budget_devise'));
+    // Sens 1 : Champ Principal -> Champ Équivalent
+    function calculateFromPrincipal() {
+        const amount = parseFloat(inputPrincipal.value);
+        const targetCurrency = selectDeviseCible.value;
+        const rate = currentRates[targetCurrency];
 
-    document.getElementById('budget_devise').addEventListener('change', function() {
-        checkDevise(this);
-    });
-
-    document.getElementById('btn-add-module').addEventListener('click', function() {
-        const container = document.getElementById('modules-container');
-        const currentModules = container.getElementsByClassName('module-card');
-        const nextIndex = currentModules.length;
-        const displayNum = nextIndex + 1;
-
-        const html = `
-            <div class="module-card p-5 bg-gray-50 rounded-xl border border-gray-200 relative transition duration-150 ease-in-out" data-index="${nextIndex}">
-                <div class="absolute top-4 right-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    Composante #${displayNum}
-                </div>
-                
-                <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
-                    <input type="hidden" name="modules[${nextIndex}][number]" value="${displayNum}">
-
-                    <div class="sm:col-span-6">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Intitulé des travaux ou de la prestation</label>
-                        <input type="text" name="modules[${nextIndex}][description]" placeholder="ex: Description de la composante..." 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                    </div>
-
-                    <div class="sm:col-span-4">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
-                        <input type="number" name="modules[${nextIndex}][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase">Durée d'exécution</label>
-                        <input type="text" name="modules[${nextIndex}][duree]" placeholder="ex: 12 mois" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                    </div>
-                </div>
-                
-                <button type="button" class="mt-3 text-xs text-red-600 hover:text-red-800 font-semibold uppercase tracking-wider flex items-center btn-remove-module">
-                    ✕ Supprimer cette composante
-                </button>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', html);
-    });
-
-    document.getElementById('modules-container').addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-remove-module')) {
-            const card = e.target.closest('.module-card');
-            card.remove();
-            
-            const currentModules = document.getElementById('modules-container').getElementsByClassName('module-card');
-            Array.from(currentModules).forEach((module, idx) => {
-                const currentNum = idx + 1;
-                module.setAttribute('data-index', idx);
-                module.querySelector('div.absolute').innerText = `Composante #${currentNum}`;
-                module.querySelector('input[type="hidden"]').value = currentNum;
-                
-                module.querySelectorAll('input, select').forEach(input => {
-                    let name = input.getAttribute('name');
-                    if(name) {
-                        input.setAttribute('name', name.replace(/modules\[\d+\]/, `modules[${idx}]`));
-                    }
-                });
-            });
+        if (!isNaN(amount) && rate) {
+            inputEquivalent.value = (amount * rate).toFixed(2);
+            if (rateDisplay) {
+                rateDisplay.textContent = `1 ${selectDevisePrincipal.value} = ${rate} ${targetCurrency}`;
+            }
+        } else {
+            inputEquivalent.value = '';
         }
-    });
+    }
+
+    // Sens 2 : Champ Équivalent -> Champ Principal (Google Currency Style)
+    function calculateFromEquivalent() {
+        const targetAmount = parseFloat(inputEquivalent.value);
+        const targetCurrency = selectDeviseCible.value;
+        const rate = currentRates[targetCurrency];
+
+        if (!isNaN(targetAmount) && rate && rate > 0) {
+            inputPrincipal.value = (targetAmount / rate).toFixed(2);
+        } else {
+            inputPrincipal.value = '';
+        }
+    }
+
+    // ÉCOUTEURS D'ÉVÉNEMENTS MONÉTAIRES
+    if (inputPrincipal && inputEquivalent) {
+        inputPrincipal.addEventListener('input', calculateFromPrincipal);
+        inputEquivalent.addEventListener('input', calculateFromEquivalent);
+
+        selectDevisePrincipal.addEventListener('change', updateRates);
+        selectDeviseCible.addEventListener('change', calculateFromPrincipal);
+
+        // Initialisation initiale au chargement de la page
+        updateRates();
+    }
+
+    // --- 3. GESTION DES COMPOSANTES / MODULES DYNAMIQUES ---
+    const btnAddModule = document.getElementById('btn-add-module');
+    const modulesContainer = document.getElementById('modules-container');
+
+    if (btnAddModule && modulesContainer) {
+        btnAddModule.addEventListener('click', function() {
+            const currentModules = modulesContainer.getElementsByClassName('module-card');
+            const nextIndex = currentModules.length;
+            const displayNum = nextIndex + 1;
+
+            const html = `
+                <div class="module-card p-5 bg-gray-50 rounded-xl border border-gray-200 relative transition duration-150 ease-in-out" data-index="${nextIndex}">
+                    <div class="absolute top-4 right-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        Composante #${displayNum}
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
+                        <input type="hidden" name="modules[${nextIndex}][number]" value="${displayNum}">
+
+                        <div class="sm:col-span-6">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Intitulé des travaux ou de la prestation</label>
+                            <input type="text" name="modules[${nextIndex}][description]" placeholder="ex: Description de la composante..." 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
+                        </div>
+
+                        <div class="sm:col-span-4">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
+                            <input type="number" name="modules[${nextIndex}][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier" 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-600 uppercase">Durée d'exécution</label>
+                            <input type="text" name="modules[${nextIndex}][duree]" placeholder="ex: 12 mois" 
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="mt-3 text-xs text-red-600 hover:text-red-800 font-semibold uppercase tracking-wider flex items-center btn-remove-module">
+                        ✕ Supprimer cette composante
+                    </button>
+                </div>
+            `;
+
+            modulesContainer.insertAdjacentHTML('beforeend', html);
+        });
+
+        modulesContainer.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('btn-remove-module')) {
+                const card = e.target.closest('.module-card');
+                card.remove();
+                
+                const currentModules = modulesContainer.getElementsByClassName('module-card');
+                Array.from(currentModules).forEach((module, idx) => {
+                    const currentNum = idx + 1;
+                    module.setAttribute('data-index', idx);
+                    module.querySelector('div.absolute').innerText = `Composante #${currentNum}`;
+                    module.querySelector('input[type="hidden"]').value = currentNum;
+                    
+                    module.querySelectorAll('input, select').forEach(input => {
+                        let name = input.getAttribute('name');
+                        if(name) {
+                            input.setAttribute('name', name.replace(/modules\[\d+\]/, `modules[${idx}]`));
+                        }
+                    });
+                });
+            }
+        });
+    }
+});
 </script>
 </x-app-layout>

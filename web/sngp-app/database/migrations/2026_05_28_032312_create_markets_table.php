@@ -31,12 +31,6 @@ return new class extends Migration
             $table->decimal('besoin_financier', 15, 2)->default(0.00);
             $table->string('devise', 10)->default('FCFA');
             $table->json('besoins_materiels')->nullable();
-            
-            // Critères d'éligibilité / Pièces exigées
-            $table->boolean('exige_quitus')->default(false);
-            $table->boolean('exige_cnps')->default(false);
-            $table->boolean('exige_rccm')->default(false);
-            $table->boolean('exige_faillite')->default(false);
 
             // Chronogramme de candidature uniquement
             $table->date('candidature_start_date')->nullable();

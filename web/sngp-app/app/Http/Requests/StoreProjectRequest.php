@@ -19,6 +19,7 @@ class StoreProjectRequest extends FormRequest
         'code' => 'required|string|unique:projects,code',
         'nom' => 'required|string|max:255',
         'description' => 'nullable|string',
+        'ville' => 'required|in:' . implode(',', array_keys(config('villes'))),
         
         // C'est ici qu'on valide l'enveloppe globale saisie
         'budget_initial' => 'required|numeric|min:0', 

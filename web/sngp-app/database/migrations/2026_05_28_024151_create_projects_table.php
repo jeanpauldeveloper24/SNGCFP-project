@@ -14,22 +14,24 @@ return new class extends Migration
             $table->string('nom');
             $table->text('description')->nullable();
             
-            // Gestion financière multi-devises et allocations
-            $table->double('budget_initial', 15, 2); // Montant dans la devise d'origine (ex: 24500000.00)
-            $table->string('budget_devise');        // Devise d'origine (USD, EUR, XOF)
-            $table->double('budget_value', 15, 2);   // Contre-valeur Pivot convertie en XOF 
-            $table->double('taux_change', 10, 2)->nullable(); // Taux figé à la création (ex: 612.50)
+            // Gestion financière multi-devises (Decimal pour la précision comptable)
+            $table->decimal('budget_initial', 15, 2); 
+            $table->string('budget_devise', 10)->default('XOF'); 
+            $table->decimal('budget_value', 15, 2)->default(0.00); // Contre-valeur en XOF
+            $table->decimal('taux_change', 10, 4)->default(1.0000); 
             
-            // Ventilation du financement (Parts mémorisées en XOF)
-            $table->double('financement_bailleur', 15, 2)->nullable(); // Ex: Part BAD
-            $table->double('financement_etat', 15, 2)->nullable();     // Ex: Contrepartie ivoirienne
+            // Ventilation du financement (Montants et Pourcentages)
+            $table->decimal('financement_bailleur', 15, 2)->nullable(); 
+            $table->decimal('financement_etat', 15, 2)->nullable();     
+            $table->decimal('pourcentage_bailleur', 5, 2)->nullable(); // Ex: 80.00%
+            $table->decimal('pourcentage_etat', 5, 2)->nullable();    // Ex: 20.00%
             
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
-            $table->double('taux_execution', 5, 2)->default(0.00);
-            $table->string('status')->default('brouillon'); // brouillon, soumis, valide, rejete
+            $table->decimal('taux_execution', 5, 2)->default(0.00);
+            $table->string('status')->default('brouillon'); 
             
-            // Suivi des acteurs (Créateur UGP & Validateur Direction Nationale)
+            // Relations
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('validated_by')->nullable()->constrained('users')->nullOnDelete();
             

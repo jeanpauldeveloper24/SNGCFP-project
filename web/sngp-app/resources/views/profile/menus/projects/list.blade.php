@@ -92,20 +92,19 @@
 
                                 <div class="mt-4 text-xs">
                                     @php
-                                        $modulesSansMarche = $project->modules->filter(function($module) {
-                                            return !$module->market;
-                                        })->count();
-                                    @endphp
+    // Récupère les modules qui n'ont absolument aucun marché lié
+    $modulesSansMarche = $project->modules->filter(fn($module) => $module->markets->isEmpty())->count();
+@endphp
 
-                                    @if($modulesSansMarche > 0)
-                                        <div class="flex items-center space-x-1.5 p-2.5 bg-red-50 rounded-lg text-red-700 font-medium border border-red-100">
-                                            <span>⚠️ {{ $modulesSansMarche }} composante(s) sans aucun marché lancé.</span>
-                                        </div>
-                                    @else
-                                        <div class="flex items-center space-x-1.5 p-2.5 bg-emerald-50 rounded-lg text-emerald-700 font-medium border border-emerald-100">
-                                            <span>✅ Tous les marchés de ce projet ont été initiés.</span>
-                                        </div>
-                                    @endif
+@if($modulesSansMarche > 0)
+    <div class="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-xs font-medium flex items-center gap-2">
+        <span>⚠️</span>
+        <span>
+            <strong>{{ $modulesSansMarche }}</strong> 
+            {{ $modulesSansMarche > 1 ? 'composantes sans aucun marché créé' : 'composante sans aucun marché créé' }}.
+        </span>
+    </div>
+@endif
                                 </div>
                             </div>
 

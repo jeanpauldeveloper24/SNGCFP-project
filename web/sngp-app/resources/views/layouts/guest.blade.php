@@ -24,7 +24,7 @@
 
                 <div class="relative z-20 text-white max-w-lg">
                     <h1 class="text-5xl font-bold font-montserrat mb-6 leading-tight uppercase tracking-tighter">
-                        SNGCFP-BAD
+                        SNGP-BAD
                     </h1>
                     <div class="h-1.5 w-24 bg-[#27AE60] mb-8 rounded-full"></div>
                     <p class="text-xl font-light italic leading-relaxed border-l-4 border-white/30 pl-6">
