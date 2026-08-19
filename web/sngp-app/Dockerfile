@@ -1,6 +1,6 @@
-FROM php:8.2-apache
+FROM php:8.4-apache
 
-# Installation des extensions PHP nécessaires pour Laravel
+# 1. Installation des dépendances système + Node.js (nécessaire pour Vite)
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -8,25 +8,33 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     git \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql
 
-# Activation du module de réécriture d'Apache (indispensable pour les routes Laravel)
+# 2. Activation du module rewrite d'Apache
 RUN a2enmod rewrite
 
-# On change la racine du serveur web pour pointer sur le dossier /public de Laravel
+# 3. Répertoire racine d'Apache pointé sur /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Copie des fichiers du projet dans le conteneur
+# 4. Copie des fichiers
+WORKDIR /var/www/html
 COPY . /var/www/html
 
-# Installation de Composer
+# 5. Installation de Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
-# Configuration des permissions pour Laravel
+# 6. Installation des dépendances JS et compilation Vite
+RUN npm ci && npm run build
+
+# 7. Permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-EXPOSE 80
+# 8. Script de démarrage pour lier le port dynamique de Render à Apache
+CMD sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && apache2-foreground
