@@ -9,10 +9,12 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    sqlite3 \
+    libsqlite3-dev \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    && docker-php-ext-install gd pdo pdo_mysql pdo_sqlite
 
 # 2. Activation du module rewrite d'Apache
 RUN a2enmod rewrite
@@ -22,7 +24,7 @@ ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# 4. Copie des fichiers
+# 4. Copie des fichiers du projet
 WORKDIR /var/www/html
 COPY . /var/www/html
 
@@ -33,8 +35,11 @@ RUN composer install --no-dev --optimize-autoloader
 # 6. Installation des dépendances JS et compilation Vite
 RUN npm ci && npm run build
 
-# 7. Permissions pour Laravel
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# 7. Création du fichier SQLite s'il n'existe pas + permissions
+RUN touch /var/www/html/database/database.sqlite
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
-# 8. Script de démarrage pour lier le port dynamique de Render à Apache
-CMD sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && apache2-foreground
+# 8. Lancement : création du port dynamique, passage des migrations et démarrage Apache
+CMD sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf \
+    && php artisan migrate --force \
+    && apache2-foreground
